@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Macro Radar</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e2a;
+    --border: #252a38;
+    --accent: #c8a96e;
+    --accent2: #6e9ec8;
+    --accent3: #c86e8a;
+    --text: #e8e4da;
+    --muted: #7a7f8e;
+    --green: #6ec8a0;
+    --red: #c86e6e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(200,169,110,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,169,110,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  .header-left p {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-family: 'IBM Plex Mono', monospace;
+    margin-top: 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .date-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.8;
+  }
+
+  /* NAV TABS */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 32px;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 8px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid var(--border);
+  }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* DASHBOARD */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .card-accent { color: var(--accent); }
+
+  /* REGIME COMPASS */
+  .regime-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .regime-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .regime-item:hover { border-color: var(--accent); }
+  .regime-item.selected { border-color: var(--accent); background: rgba(200,169,110,0.08); }
+  .regime-item label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+    cursor: pointer;
+  }
+  .regime-item select, .regime-item input {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.85rem;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+  }
+  .regime-item select option { background: var(--surface2); }
+
+  /* DASHBOARD INDICATORS */
+  .indicators-list { display: flex; flex-direction: column; gap: 10px; }
+  .indicator-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .indicator-row:last-child { border-bottom: none; }
+  .indicator-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .indicator-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .indicator-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+    width: 60px;
+    text-align: right;
+    background: none;
+    border: none;
+    outline: none;
+  }
+  .signal-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .signal-neutral { background: var(--muted); }
+  .signal-bullish { background: var(--green); }
+  .signal-bearish { background: var(--red); }
+  .signal-watch { background: var(--accent); }
+
+  /* NARRATIVE BOX */
+  .narrative-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .narrative-box textarea {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 300;
+    resize: none;
+    outline: none;
+    line-height: 1.7;
+    min-height: 80px;
+  }
+  .narrative-box textarea::placeholder { color: var(--muted); font-style: italic; }
+
+  /* CHAIN REACTION */
+  .chain {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .chain-node {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chain-node:last-child { border-bottom: none; }
+  .chain-node:hover .chain-content { opacity: 1; }
+  .chain-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    width: 20px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .chain-content { flex: 1; }
+  .chain-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .chain-text {
+    font-size: 0.85rem;
+    color: var(--text);
+    background: none;
+    border: none;
+    width: 100%;
+    outline: none;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+  }
+  .chain-text::placeholder { color: var(--border); }
+  .chain-arrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent2);
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* JOURNAL */
+  .journal-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  .journal-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .journal-entry:hover { border-color: var(--accent); }
+  .journal-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .journal-entry-date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  .journal-entry-tags {
+    display: flex;
+    gap: 6px;
+  }
+  .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .tag.rates { border-color: var(--accent2); color: var(--accent2); }
+  .tag.fx { border-color: var(--accent); color: var(--accent); }
+  .tag.geo { border-color: var(--accent3); color: var(--accent3); }
+  .tag.inflation { border-color: var(--red); color: var(--red); }
+  .tag.fiscal { border-color: var(--green); color: var(--green); }
+  .journal-entry-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .journal-entry-preview {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* NEW ENTRY FORM */
+  .new-entry-form {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .form-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+  }
+  .form-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-textarea {
+    min-height: 90px;
+    resize: vertical;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+  .tags-select {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag-toggle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tag-toggle.active.rates { border-color: var(--accent2); color: var(--accent2); background: rgba(110,158,200,0.1); }
+  .tag-toggle.active.fx { border-color: var(--accent); color: var(--accent); background: rgba(200,169,110,0.1); }
+  .tag-toggle.active.geo { border-color: var(--accent3); color: var(--accent3); background: rgba(200,110,138,0.1); }
+  .tag-toggle.active.inflation { border-color: var(--red); color: var(--red); background: rgba(200,110,110,0.1); }
+  .tag-toggle.active.fiscal { border-color: var(--green); color: var(--green); background: rgba(110,200,160,0.1); }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 500;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+  .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+  /* CHECKLIST */
+  .checklist { display: flex; flex-direction: column; gap: 6px; }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .check-item:hover { border-color: var(--accent); }
+  .check-item.done { opacity: 0.5; }
+  .check-box {
+    width: 14px; height: 14px;
+    border: 1px solid var(--muted);
+    border-radius: 3px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: var(--accent);
+    transition: all 0.2s;
+  }
+  .check-item.done .check-box {
+    background: rgba(200,169,110,0.15);
+    border-color: var(--accent);
+  }
+  .check-text {
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+  .check-freq {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* SECTION HEADERS */
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* FULL WIDTH CARD */
+  .card-full {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  /* CONNECTIONS MAP */
+  .connections-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .connection-cell {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .connection-from {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .connection-arrow {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .connection-to {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--accent2);
+    margin-bottom: 8px;
+  }
+  .connection-note {
+    font-size: 0.75rem;
+    color: var(--text);
+    background: none;
+    border: none;
+    width: 100%;
+    outline: none;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    resize: none;
+    line-height: 1.5;
+    min-height: 50px;
+  }
+  .connection-note::placeholder { color: var(--border); font-style: italic; }
+
+  /* HYPOTHESIS TRACKER */
+  .hypothesis-list { display: flex; flex-direction: column; gap: 10px; }
+  .hypothesis-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--muted);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 16px;
+    transition: all 0.2s;
+  }
+  .hypothesis-item.open { border-left-color: var(--accent2); }
+  .hypothesis-item.confirmed { border-left-color: var(--green); }
+  .hypothesis-item.rejected { border-left-color: var(--red); }
+  .hypothesis-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .hypothesis-text {
+    font-size: 0.85rem;
+    color: var(--text);
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+  }
+  .hypothesis-status {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+  .status-open { background: rgba(110,158,200,0.15); color: var(--accent2); }
+  .status-confirmed { background: rgba(110,200,160,0.15); color: var(--green); }
+  .status-rejected { background: rgba(200,110,110,0.15); color: var(--red); }
+  .hypothesis-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  /* ADD HYPOTHESIS */
+  .add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .add-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .add-input:focus { border-color: var(--accent); }
+  .add-input::placeholder { color: var(--muted); font-style: italic; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* FOOTER */
+  .footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .streak {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>macro radar</h1>
+      <p>Connect the dots · Build conviction · Track regime</p>
+    </div>
+    <div class="date-badge" id="dateBadge"></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+    <button class="tab" onclick="switchTab('chain')">Chain Reaction</button>
+    <button class="tab" onclick="switchTab('journal')">Journal</button>
+    <button class="tab" onclick="switchTab('hypothesis')">Hypotheses</button>
+    <button class="tab" onclick="switchTab('routine')">Routine</button>
+    <button class="tab" onclick="switchTab('learning')">Learning</button>
+  </div>
+
+  <!-- DASHBOARD PANEL -->
+  <div id="panel-dashboard" class="panel active">
+
+    <div class="section-label">Current Macro Regime</div>
+    <div class="card-full" style="margin-bottom:24px;">
+      <div class="regime-grid" style="margin-bottom:16px;">
+        <div class="regime-item">
+          <label>Growth Cycle</label>
+          <select id="growthCycle">
+            <option>Early Expansion</option>
+            <option>Mid Expansion</option>
+            <option selected>Late Cycle</option>
+            <option>Slowdown</option>
+            <option>Recession</option>
+            <option>Recovery</option>
+          </select>
+        </div>
+        <div class="regime-item">
+          <label>Inflation Regime</label>
+          <select id="inflationRegime">
+            <option>Deflationary</option>
+            <option>Low &amp; Stable</option>
+            <option>Rising</option>
+            <option selected>Elevated / Sticky</option>
+            <option>Falling</option>
+          </select>
+        </div>
+        <div class="regime-item">
+          <label>Central Bank Stance</label>
+          <select id="cbStance">
+            <option>Aggressively Tightening</option>
+            <option selected>On Hold</option>
+            <option>Pivoting Dovish</option>
+            <option>Cutting</option>
+            <option>Aggressively Easing</option>
+          </select>
+        </div>
+        <div class="regime-item">
+          <label>Risk Appetite</label>
+          <select id="riskAppetite">
+            <option>Risk-On</option>
+            <option selected>Neutral / Mixed</option>
+            <option>Risk-Off</option>
+            <option>Stress / Crisis</option>
+          </select>
+        </div>
+        <div class="regime-item">
+          <label>Dollar Trend</label>
+          <select id="dollarTrend">
+            <option>Strong Bull</option>
+            <option selected>Moderately Strong</option>
+            <option>Range-Bound</option>
+            <option>Weakening</option>
+            <option>Bear</option>
+          </select>
+        </div>
+        <div class="regime-item">
+          <label>Geopolitical Stress</label>
+          <select id="geoStress">
+            <option>Low</option>
+            <option>Moderate</option>
+            <option selected>Elevated</option>
+            <option>High / Crisis</option>
+          </select>
+        </div>
+      </div>
+      <div class="section-label" style="margin-bottom:10px;">One-Sentence Regime Summary</div>
+      <div style="background:var(--surface2);border-radius:6px;border:1px solid var(--border);padding:12px;">
+        <textarea id="regimeSummary" rows="2" placeholder="e.g. Late-cycle economy with sticky services inflation, Fed on hold, elevated geopolitical risk keeping dollar bid and risk appetite suppressed..." style="width:100%;background:none;border:none;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:0.85rem;font-weight:300;resize:none;outline:none;line-height:1.7;"></textarea>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Key Indicators</span>
+          <span class="card-title card-accent">Signal</span>
+        </div>
+        <div class="indicators-list" id="indicatorsList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Market Implications</span>
+        </div>
+        <div class="chain" id="implicationsList"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CHAIN REACTION PANEL -->
+  <div id="panel-chain" class="panel">
+
+    <div class="section-label">Transmission Chain Builder</div>
+    <div class="card-full" style="margin-bottom:20px;">
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Map how a macro event flows through the system. Fill in the chain — each step triggers the next. This builds your intuition for transmission mechanisms.</p>
+      <div class="chain" id="chainNodes"></div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-ghost" onclick="addChainNode()" style="font-size:0.6rem;">+ Add Step</button>
+        <button class="btn btn-ghost" onclick="clearChain()" style="font-size:0.6rem;margin-left:6px;">Clear</button>
+        <button class="btn btn-primary" onclick="loadTemplate()" style="font-size:0.6rem;float:right;">Load Template</button>
+      </div>
+    </div>
+
+    <div class="section-label">Cross-Asset Connections</div>
+    <div class="connections-grid">
+      <div class="connection-cell">
+        <div class="connection-from">Rates ↑</div>
+        <div class="connection-arrow">→ affects →</div>
+        <div class="connection-to">Equities</div>
+        <textarea class="connection-note" placeholder="Higher discount rate compresses PE multiples, especially growth stocks..."></textarea>
+      </div>
+      <div class="connection-cell">
+        <div class="connection-from">Dollar ↑</div>
+        <div class="connection-arrow">→ affects →</div>
+        <div class="connection-to">EM Assets</div>
+        <textarea class="connection-note" placeholder="Dollar strength tightens financial conditions in EM, raises debt servicing costs..."></textarea>
+      </div>
+      <div class="connection-cell">
+        <div class="connection-from">Oil ↑</div>
+        <div class="connection-arrow">→ affects →</div>
+        <div class="connection-to">Inflation / Policy</div>
+        <textarea class="connection-note" placeholder="Energy costs feed into CPI, complicates Fed's ability to cut..."></textarea>
+      </div>
+      <div class="connection-cell">
+        <div class="connection-from">Yield Curve</div>
+        <div class="connection-arrow">→ signals →</div>
+        <div class="connection-to">Credit / Recession</div>
+        <textarea class="connection-note" placeholder="Inversion signals tight policy is biting. Watch for uninversion — that's when recession risk spikes..."></textarea>
+      </div>
+      <div class="connection-cell">
+        <div class="connection-from">Geopolitics</div>
+        <div class="connection-arrow">→ affects →</div>
+        <div class="connection-to">Capital Flows</div>
+        <textarea class="connection-note" placeholder="Risk events push capital to safe havens: USD, Treasuries, gold. Watch DXY spike as proxy..."></textarea>
+      </div>
+      <div class="connection-cell">
+        <div class="connection-from">Fiscal Expansion</div>
+        <div class="connection-arrow">→ affects →</div>
+        <div class="connection-to">Rates / Inflation</div>
+        <textarea class="connection-note" placeholder="Large deficits keep long-end yields elevated even when Fed cuts. Term premium rises..."></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JOURNAL PANEL -->
+  <div id="panel-journal" class="panel">
+
+    <div id="journalNewForm" style="display:none;">
+      <div class="new-entry-form">
+        <div class="form-row">
+          <div class="form-field">
+            <span class="form-label">Event / Trigger</span>
+            <input type="text" id="entryTitle" class="form-input" placeholder="e.g. Fed holds rates, signals 2 cuts in 2025">
+          </div>
+          <div class="form-field">
+            <span class="form-label">Date</span>
+            <input type="date" id="entryDate" class="form-input">
+          </div>
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <span class="form-label">Tags</span>
+          <div class="tags-select">
+            <button class="tag-toggle rates" onclick="toggleTag(this,'rates')">Rates</button>
+            <button class="tag-toggle fx" onclick="toggleTag(this,'fx')">FX</button>
+            <button class="tag-toggle inflation" onclick="toggleTag(this,'inflation')">Inflation</button>
+            <button class="tag-toggle geo" onclick="toggleTag(this,'geo')">Geopolitics</button>
+            <button class="tag-toggle fiscal" onclick="toggleTag(this,'fiscal')">Fiscal</button>
+          </div>
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <span class="form-label">What happened & why it matters</span>
+          <textarea id="entryWhat" class="form-input form-textarea" placeholder="Describe the event and the macro significance..."></textarea>
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <span class="form-label">Chain reaction — what does this trigger?</span>
+          <textarea id="entryChain" class="form-input form-textarea" placeholder="If this, then... walk through the transmission mechanism..."></textarea>
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <span class="form-label">My prior view vs. what actually happened</span>
+          <textarea id="entryPrior" class="form-input" style="min-height:60px;" placeholder="I expected X, but Y happened because..."></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="toggleNewEntry()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-label" style="margin-bottom:0;flex:1;">Journal Entries</div>
+      <button class="btn btn-primary" onclick="toggleNewEntry()" style="font-size:0.6rem;">+ New Entry</button>
+    </div>
+
+    <div class="journal-list" id="journalList"></div>
+
+  </div>
+
+  <!-- HYPOTHESIS PANEL -->
+  <div id="panel-hypothesis" class="panel">
+
+    <div class="section-label">Active Hypotheses</div>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Write your macro views as testable hypotheses. Track them over time. Being wrong is valuable — understanding <em>why</em> you were wrong is how intuition gets built.</p>
+
+    <div class="hypothesis-list" id="hypothesisList"></div>
+
+    <div class="add-row">
+      <input type="text" class="add-input" id="newHypothesis" placeholder="e.g. If the Fed cuts before inflation hits 2%, long-end yields will sell off as term premium rises...">
+      <button class="btn btn-primary" onclick="addHypothesis()" style="font-size:0.6rem;">Add</button>
+    </div>
+
+  </div>
+
+  <!-- ROUTINE PANEL -->
+  <div id="panel-routine" class="panel">
+
+    <div class="section-label">Weekly Rhythm</div>
+    <div class="card-full" style="margin-bottom:20px;">
+      <div class="checklist" id="routineChecklist"></div>
+    </div>
+
+    <div class="section-label">Quarterly Deep Work</div>
+    <div class="card-full" style="margin-bottom:20px;">
+      <div class="checklist" id="quarterlyChecklist"></div>
+    </div>
+
+    <div class="section-label">This Week's Focus</div>
+    <div class="narrative-box">
+      <textarea rows="4" placeholder="What's the one macro question you want to answer this week? What data releases are important? What's your view going in?"></textarea>
+    </div>
+
+  </div>
+
+  <!-- LEARNING PANEL -->
+  <div id="panel-learning" class="panel">
+
+    <div id="learningNewForm" style="display:none;">
+      <div class="new-entry-form">
+        <div class="form-row">
+          <div class="form-field">
+            <span class="form-label">Title</span>
+            <input type="text" id="learnTitle" class="form-input" placeholder="e.g. How the yield curve predicts recessions">
+          </div>
+          <div class="form-field">
+            <span class="form-label">Source</span>
+            <input type="text" id="learnSource" class="form-input" placeholder="e.g. The Economist, VoxEU, Dalio">
+          </div>
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <span class="form-label">Topic Tags</span>
+          <div class="tags-select">
+            <button class="tag-toggle rates" onclick="toggleLearnTag(this,'rates')">Rates</button>
+            <button class="tag-toggle fx" onclick="toggleLearnTag(this,'fx')">FX</button>
+            <button class="tag-toggle inflation" onclick="toggleLearnTag(this,'inflation')">Inflation</button>
+            <button class="tag-toggle geo" onclick="toggleLearnTag(this,'geo')">Geopolitics</button>
+            <button class="tag-toggle fiscal" onclick="toggleLearnTag(this,'fiscal')">Fiscal</button>
+          </div>
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <span class="form-label">Key concept / what I learned</span>
+          <textarea id="learnConcept" class="form-input form-textarea" placeholder="The core idea in your own words..."></textarea>
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <span class="form-label">How it connects to other things I know</span>
+          <textarea id="learnConnect" class="form-input form-textarea" placeholder="This relates to X because... This changes how I think about Y..."></textarea>
+        </div>
+        <div class="form-field" style="margin-bottom:12px;">
+          <span class="form-label">Questions this raised / things to explore further</span>
+          <textarea id="learnQuestions" class="form-input" style="min-height:60px;" placeholder="I still don't understand... I want to read more about..."></textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="toggleNewLearn()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveLearnNote()">Save Note</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-label" style="margin-bottom:0;flex:1;">Learning Notes</div>
+      <button class="btn btn-primary" onclick="toggleNewLearn()" style="font-size:0.6rem;">+ New Note</button>
+    </div>
+
+    <div id="learnFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+      <button class="tag-toggle active" onclick="filterLearn(this,'all')" style="border-color:var(--accent);color:var(--accent);">All</button>
+      <button class="tag-toggle rates" onclick="filterLearn(this,'rates')">Rates</button>
+      <button class="tag-toggle fx" onclick="filterLearn(this,'fx')">FX</button>
+      <button class="tag-toggle inflation" onclick="filterLearn(this,'inflation')">Inflation</button>
+      <button class="tag-toggle geo" onclick="filterLearn(this,'geo')">Geopolitics</button>
+      <button class="tag-toggle fiscal" onclick="filterLearn(this,'fiscal')">Fiscal</button>
+    </div>
+
+    <div class="journal-list" id="learnList"></div>
+
+  </div>
+
+  <div class="footer">
+    <span class="footer-text">Macro Radar · Personal</span>
+    <span class="streak" id="streakDisplay"></span>
+  </div>
+
+</div>
+
+<script>
+  // ── STORAGE HELPERS ──────────────────────────────────────────────
+  const LS = {
+    get: (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch(e) { return fallback; } },
+    set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+  };
+
+  // ── DATE ─────────────────────────────────────────────────────────
+  const now = new Date();
+  document.getElementById('dateBadge').innerHTML =
+    now.toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'}) + '<br>' +
+    '<span style="color:var(--accent)">Week ' + getWeekNumber(now) + ' · Q' + (Math.ceil((now.getMonth()+1)/3)) + ' ' + now.getFullYear() + '</span>';
+
+  function getWeekNumber(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+  }
+
+  document.getElementById('entryDate').value = now.toISOString().split('T')[0];
+
+  // ── TAB SWITCHING ────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    event.target.classList.add('active');
+    LS.set('activeTab', name);
+  }
+
+  // Restore last tab
+  const savedTab = LS.get('activeTab', 'dashboard');
+  if (savedTab !== 'dashboard') {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + savedTab).classList.add('active');
+    const tabs = ['dashboard','chain','journal','hypothesis','routine','learning'];
+    const tabIdx = tabs.indexOf(savedTab);
+    if (tabIdx >= 0) document.querySelectorAll('.tab')[tabIdx].classList.add('active');
+  }
+
+  // ── REGIME DASHBOARD ─────────────────────────────────────────────
+  const regimeFields = ['growthCycle','inflationRegime','cbStance','riskAppetite','dollarTrend','geoStress'];
+  const savedRegime = LS.get('regime', {});
+  regimeFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && savedRegime[id]) el.value = savedRegime[id];
+    el && el.addEventListener('change', saveRegime);
+  });
+  const regimeSummaryEl = document.getElementById('regimeSummary');
+  if (regimeSummaryEl) {
+    regimeSummaryEl.value = LS.get('regimeSummary', '');
+    regimeSummaryEl.addEventListener('input', () => LS.set('regimeSummary', regimeSummaryEl.value));
+  }
+  function saveRegime() {
+    const r = {};
+    regimeFields.forEach(id => { const el = document.getElementById(id); if(el) r[id] = el.value; });
+    LS.set('regime', r);
+  }
+
+  // ── INDICATORS ───────────────────────────────────────────────────
+  const defaultIndicators = [
+    { name: '2yr Treasury', val: '4.82%', signal: 'bearish' },
+    { name: '10yr Treasury', val: '4.31%', signal: 'watch' },
+    { name: '2s10s Spread', val: '-51bps', signal: 'bearish' },
+    { name: 'DXY', val: '104.2', signal: 'bullish' },
+    { name: 'Fed Funds Rate', val: '5.25%', signal: 'neutral' },
+    { name: 'Core PCE', val: '2.8%', signal: 'watch' },
+    { name: 'WTI Oil', val: '–', signal: 'neutral' },
+    { name: 'Gold', val: '–', signal: 'neutral' },
+  ];
+  let indicators = LS.get('indicators', defaultIndicators);
+  const signalCycle = ['neutral','bullish','bearish','watch'];
+
+  function renderIndicators() {
+    document.getElementById('indicatorsList').innerHTML = indicators.map((ind, i) => `
+      <div class="indicator-row">
+        <span class="indicator-name">${ind.name}</span>
+        <div class="indicator-controls">
+          <input class="indicator-val" value="${ind.val}" onchange="indicators[${i}].val=this.value;LS.set('indicators',indicators)" title="Edit value">
+          <div class="signal-dot signal-${ind.signal}" onclick="cycleSignal(${i})" title="Click to change signal"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function cycleSignal(i) {
+    const idx = signalCycle.indexOf(indicators[i].signal);
+    indicators[i].signal = signalCycle[(idx+1) % signalCycle.length];
+    LS.set('indicators', indicators);
+    renderIndicators();
+  }
+  renderIndicators();
+
+  // ── IMPLICATIONS ─────────────────────────────────────────────────
+  const defaultImplications = [
+    { text: 'Duration assets remain under pressure', icon: '↓' },
+    { text: 'USD likely to stay bid vs. EM currencies', icon: '↑' },
+    { text: 'Credit spreads: watch for widening', icon: '⚠' },
+    { text: 'Commodities mixed: gold bid, oil capped', icon: '→' },
+  ];
+  let implications = LS.get('implications', defaultImplications);
+
+  function renderImplications() {
+    document.getElementById('implicationsList').innerHTML = implications.map((imp, i) => `
+      <div class="chain-node">
+        <span class="chain-arrow">${imp.icon}</span>
+        <input class="chain-text" value="${imp.text}" placeholder="Implication..."
+          onchange="implications[${i}].text=this.value;LS.set('implications',implications)">
+      </div>
+    `).join('');
+  }
+  renderImplications();
+
+  // ── CHAIN BUILDER ────────────────────────────────────────────────
+  const chainTemplates = [
+    { label: 'Trigger',     placeholder: 'e.g. Fed signals rate cut earlier than expected', value: '' },
+    { label: 'Rates',       placeholder: 'Short-end yields fall, curve steepens', value: '' },
+    { label: 'Dollar',      placeholder: 'USD weakens as rate differential narrows', value: '' },
+    { label: 'EM',          placeholder: 'EM currencies rally, capital flows to EM assets', value: '' },
+    { label: 'Commodities', placeholder: 'Dollar weakness lifts commodity prices (gold, oil)', value: '' },
+    { label: 'Inflation',   placeholder: 'Import prices rise, inflation expectations tick up', value: '' },
+    { label: 'Outcome',     placeholder: 'Fed faces dilemma: cut causes inflation to re-accelerate', value: '' },
+  ];
+  let chainData = LS.get('chainData', chainTemplates);
+
+  function renderChain() {
+    document.getElementById('chainNodes').innerHTML = chainData.map((node, i) => `
+      <div class="chain-node">
+        <span class="chain-num">${String(i+1).padStart(2,'0')}</span>
+        <div class="chain-content">
+          <div class="chain-label">${node.label}</div>
+          <input class="chain-text" value="${node.value||''}" placeholder="${node.placeholder}"
+            onchange="chainData[${i}].value=this.value;LS.set('chainData',chainData)">
+        </div>
+        ${i < chainData.length-1 ? '<span class="chain-arrow">↓</span>' : '<span class="chain-arrow">★</span>'}
+      </div>
+    `).join('');
+  }
+
+  function addChainNode() {
+    chainData.push({ label: 'Step ' + (chainData.length+1), placeholder: 'What happens next?', value: '' });
+    LS.set('chainData', chainData);
+    renderChain();
+  }
+
+  function clearChain() {
+    chainData = [{ label: 'Trigger', placeholder: 'Start with an event or policy change...', value: '' }];
+    LS.set('chainData', chainData);
+    renderChain();
+  }
+
+  function loadTemplate() {
+    chainData = chainTemplates.map(t => ({...t, value: ''}));
+    LS.set('chainData', chainData);
+    renderChain();
+  }
+  renderChain();
+
+  // ── CROSS-ASSET CONNECTION NOTES ─────────────────────────────────
+  const connKeys = ['conn0','conn1','conn2','conn3','conn4','conn5'];
+  document.querySelectorAll('.connection-note').forEach((el, i) => {
+    el.value = LS.get(connKeys[i], '');
+    el.addEventListener('input', () => LS.set(connKeys[i], el.value));
+  });
+
+  // ── JOURNAL ──────────────────────────────────────────────────────
+  const defaultEntries = [
+    {
+      date: '2025-11-15',
+      title: 'Fed holds rates at Nov FOMC, 2 cuts projected for 2026',
+      tags: ['rates','inflation'],
+      what: 'FOMC voted unanimously to hold. Dot plot revised to show 2 cuts in 2026 vs 3 previously. Powell emphasized services inflation remains sticky.',
+      chain: 'Hold → short-end yields stay elevated → yield curve stays inverted → dollar stays bid → EM under pressure',
+      prior: 'Expected more dovish tone. Market had priced 3 cuts — repricing caused front-end selloff.'
+    }
+  ];
+  let journalEntries = LS.get('journalEntries', defaultEntries);
+  let activeTags = [];
+
+  function toggleTag(btn, tag) {
+    btn.classList.toggle('active');
+    activeTags = activeTags.includes(tag) ? activeTags.filter(t => t !== tag) : [...activeTags, tag];
+  }
+
+  function toggleNewEntry() {
+    const form = document.getElementById('journalNewForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function saveEntry() {
+    const title = document.getElementById('entryTitle').value;
+    if (!title) return;
+    journalEntries.unshift({
+      date: document.getElementById('entryDate').value,
+      title,
+      tags: [...activeTags],
+      what: document.getElementById('entryWhat').value,
+      chain: document.getElementById('entryChain').value,
+      prior: document.getElementById('entryPrior').value,
+    });
+    LS.set('journalEntries', journalEntries);
+    activeTags = [];
+    document.querySelectorAll('.tag-toggle').forEach(t => t.classList.remove('active'));
+    ['entryTitle','entryWhat','entryChain','entryPrior'].forEach(id => document.getElementById(id).value = '');
+    toggleNewEntry();
+    renderJournal();
+  }
+
+  function deleteEntry(i) {
+    journalEntries.splice(i, 1);
+    LS.set('journalEntries', journalEntries);
+    renderJournal();
+  }
+
+  function renderJournal() {
+    document.getElementById('journalList').innerHTML = journalEntries.length ? journalEntries.map((e, i) => `
+      <div class="journal-entry">
+        <div class="journal-entry-header">
+          <span class="journal-entry-date">${e.date}</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="journal-entry-tags">${e.tags.map(t => `<span class="tag ${t}">${t}</span>`).join('')}</div>
+            <button onclick="deleteEntry(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;padding:2px 5px;" title="Delete">✕</button>
+          </div>
+        </div>
+        <div class="journal-entry-title">${e.title}</div>
+        <div class="journal-entry-preview">${e.what ? e.what.substring(0,120) + (e.what.length > 120 ? '...' : '') : ''}</div>
+        ${e.chain ? `<div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--accent2);">→ ${e.chain.substring(0,100)}</div>` : ''}
+      </div>
+    `).join('') : '<div style="color:var(--muted);font-size:0.85rem;padding:20px 0;">No entries yet. Hit + New Entry to start your macro journal.</div>';
+  }
+  renderJournal();
+
+  // ── HYPOTHESES ───────────────────────────────────────────────────
+  const defaultHypotheses = [
+    { text: 'If the Fed cuts before Core PCE reaches 2%, the long end will sell off as term premium rises, causing a bear steepener.', status: 'open', date: '2025-10-01' },
+    { text: 'USD/CNY will test 7.5 in H1 2025 as US-China trade tensions escalate under new tariff regime.', status: 'open', date: '2025-09-15' },
+    { text: 'A European recession in late 2024 would have caused EUR/USD to break below 1.05.', status: 'rejected', date: '2025-03-01' },
+  ];
+  let hypotheses = LS.get('hypotheses', defaultHypotheses);
+  const statusCycle = ['open','confirmed','rejected'];
+
+  function cycleStatus(i) {
+    const idx = statusCycle.indexOf(hypotheses[i].status);
+    hypotheses[i].status = statusCycle[(idx+1) % statusCycle.length];
+    LS.set('hypotheses', hypotheses);
+    renderHypotheses();
+  }
+
+  function deleteHypothesis(i) {
+    hypotheses.splice(i, 1);
+    LS.set('hypotheses', hypotheses);
+    renderHypotheses();
+  }
+
+  function addHypothesis() {
+    const val = document.getElementById('newHypothesis').value.trim();
+    if (!val) return;
+    hypotheses.unshift({ text: val, status: 'open', date: now.toISOString().split('T')[0] });
+    LS.set('hypotheses', hypotheses);
+    document.getElementById('newHypothesis').value = '';
+    renderHypotheses();
+  }
+
+  document.getElementById('newHypothesis').addEventListener('keydown', e => { if(e.key==='Enter') addHypothesis(); });
+
+  function renderHypotheses() {
+    document.getElementById('hypothesisList').innerHTML = hypotheses.map((h, i) => `
+      <div class="hypothesis-item ${h.status}">
+        <div class="hypothesis-header">
+          <div class="hypothesis-text">${h.text}</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:12px;">
+            <button class="hypothesis-status status-${h.status}" onclick="cycleStatus(${i})">${h.status}</button>
+            <button onclick="deleteHypothesis(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;" title="Delete">✕</button>
+          </div>
+        </div>
+        <div class="hypothesis-meta">Added ${h.date} · Click status to cycle: open → confirmed → rejected</div>
+      </div>
+    `).join('');
+  }
+  renderHypotheses();
+
+  // ── ROUTINE ──────────────────────────────────────────────────────
+  const weekly = [
+    { text: 'Check 2yr / 10yr yields & spread', freq: 'Mon' },
+    { text: 'Read one central bank speech or statement', freq: 'Tue' },
+    { text: 'Scan FRED for any new data releases', freq: 'Wed' },
+    { text: 'Read one VoxEU or PIIE piece', freq: 'Thu' },
+    { text: 'Write weekly regime summary (1 paragraph)', freq: 'Fri' },
+    { text: 'Update hypotheses — any new evidence?', freq: 'Fri' },
+    { text: 'Log one journal entry on major event of the week', freq: 'Fri' },
+    { text: 'Check CME FedWatch for rate expectations shift', freq: 'Weekly' },
+  ];
+  const quarterly = [
+    { text: 'Read IMF World Economic Outlook update', freq: 'Q1 / Q3' },
+    { text: 'Read BIS Quarterly Review', freq: 'Quarterly' },
+    { text: 'Write full macro regime document (1 page)', freq: 'Quarterly' },
+    { text: 'Review all hypotheses — score yourself', freq: 'Quarterly' },
+    { text: 'Pick one macro puzzle — find 2–3 papers on it', freq: 'Quarterly' },
+    { text: 'Listen to 2–3 Odd Lots / Macro Hive podcasts', freq: 'Quarterly' },
+  ];
+
+  // Reset weekly checklist every Monday
+  const lastWeekReset = LS.get('lastWeekReset', '');
+  const thisMonday = (() => { const d = new Date(now); d.setDate(d.getDate() - ((d.getDay()+6)%7)); return d.toDateString(); })();
+  if (lastWeekReset !== thisMonday) { LS.set('weeklyDone', []); LS.set('lastWeekReset', thisMonday); }
+
+  let weeklyDone = new Set(LS.get('weeklyDone', []));
+  let quarterlyDone = new Set(LS.get('quarterlyDone', []));
+
+  // Restore routine focus textarea
+  const focusEl = document.querySelector('#panel-routine .narrative-box textarea');
+  if (focusEl) {
+    focusEl.value = LS.get('routineFocus', '');
+    focusEl.addEventListener('input', () => LS.set('routineFocus', focusEl.value));
+  }
+
+  function renderRoutine() {
+    document.getElementById('routineChecklist').innerHTML = weekly.map((item, i) => `
+      <div class="check-item ${weeklyDone.has(i) ? 'done' : ''}" onclick="toggleWeekly(${i})">
+        <div class="check-box">${weeklyDone.has(i) ? '✓' : ''}</div>
+        <span class="check-text">${item.text}</span>
+        <span class="check-freq">${item.freq}</span>
+      </div>
+    `).join('');
+
+    document.getElementById('quarterlyChecklist').innerHTML = quarterly.map((item, i) => `
+      <div class="check-item ${quarterlyDone.has(i) ? 'done' : ''}" onclick="toggleQuarterly(${i})">
+        <div class="check-box">${quarterlyDone.has(i) ? '✓' : ''}</div>
+        <span class="check-text">${item.text}</span>
+        <span class="check-freq">${item.freq}</span>
+      </div>
+    `).join('');
+
+    const done = weeklyDone.size + quarterlyDone.size;
+    const total = weekly.length + quarterly.length;
+    document.getElementById('streakDisplay').textContent = done + ' / ' + total + ' tasks done this period';
+  }
+
+  function toggleWeekly(i) {
+    weeklyDone.has(i) ? weeklyDone.delete(i) : weeklyDone.add(i);
+    LS.set('weeklyDone', [...weeklyDone]);
+    renderRoutine();
+  }
+  function toggleQuarterly(i) {
+    quarterlyDone.has(i) ? quarterlyDone.delete(i) : quarterlyDone.add(i);
+    LS.set('quarterlyDone', [...quarterlyDone]);
+    renderRoutine();
+  }
+  renderRoutine();
+
+  // ── SAVE INDICATOR VALUES ON BLUR ────────────────────────────────
+  document.addEventListener('change', e => {
+    if (e.target.classList.contains('indicator-val')) LS.set('indicators', indicators);
+  });
+  // ── LEARNING NOTES ───────────────────────────────────────────────
+  let learnNotes = LS.get('learnNotes', []);
+  let activeLearnTags = [];
+  let activeLearnFilter = 'all';
+
+  function toggleLearnTag(btn, tag) {
+    btn.classList.toggle('active');
+    activeLearnTags = activeLearnTags.includes(tag)
+      ? activeLearnTags.filter(t => t !== tag)
+      : [...activeLearnTags, tag];
+  }
+
+  function toggleNewLearn() {
+    const form = document.getElementById('learningNewForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function saveLearnNote() {
+    const title = document.getElementById('learnTitle').value.trim();
+    if (!title) return;
+    learnNotes.unshift({
+      id: Date.now(),
+      date: now.toISOString().split('T')[0],
+      title,
+      source: document.getElementById('learnSource').value,
+      tags: [...activeLearnTags],
+      concept: document.getElementById('learnConcept').value,
+      connect: document.getElementById('learnConnect').value,
+      questions: document.getElementById('learnQuestions').value,
+    });
+    LS.set('learnNotes', learnNotes);
+    activeLearnTags = [];
+    document.querySelectorAll('#learningNewForm .tag-toggle').forEach(t => t.classList.remove('active'));
+    ['learnTitle','learnSource','learnConcept','learnConnect','learnQuestions'].forEach(id => document.getElementById(id).value = '');
+    toggleNewLearn();
+    renderLearnNotes();
+  }
+
+  function deleteLearnNote(i) {
+    learnNotes.splice(i, 1);
+    LS.set('learnNotes', learnNotes);
+    renderLearnNotes();
+  }
+
+  function filterLearn(btn, tag) {
+    document.querySelectorAll('#learnFilterRow .tag-toggle').forEach(t => {
+      t.classList.remove('active');
+      t.style.borderColor = ''; t.style.color = '';
+    });
+    btn.classList.add('active');
+    if (tag === 'all') { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; }
+    activeLearnFilter = tag;
+    renderLearnNotes();
+  }
+
+  function renderLearnNotes() {
+    const filtered = activeLearnFilter === 'all'
+      ? learnNotes
+      : learnNotes.filter(n => n.tags.includes(activeLearnFilter));
+
+    document.getElementById('learnList').innerHTML = filtered.length ? filtered.map((n, i) => `
+      <div class="journal-entry" onclick="toggleLearnExpand(${i})" style="cursor:pointer;">
+        <div class="journal-entry-header">
+          <span class="journal-entry-date">${n.date}${n.source ? ' · <span style="color:var(--muted)">' + n.source + '</span>' : ''}</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="journal-entry-tags">${n.tags.map(t => `<span class="tag ${t}">${t}</span>`).join('')}</div>
+            <button onclick="event.stopPropagation();deleteLearnNote(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;padding:2px 5px;" title="Delete">✕</button>
+          </div>
+        </div>
+        <div class="journal-entry-title">${n.title}</div>
+        <div class="journal-entry-preview">${n.concept ? n.concept.substring(0,130) + (n.concept.length > 130 ? '...' : '') : ''}</div>
+        <div id="learn-expand-${i}" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+          ${n.connect ? `<div style="margin-bottom:10px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent2);margin-bottom:4px;">Connections</div><div style="font-size:0.8rem;color:var(--text);line-height:1.6;">${n.connect}</div></div>` : ''}
+          ${n.questions ? `<div><div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent3);margin-bottom:4px;">Open Questions</div><div style="font-size:0.8rem;color:var(--text);line-height:1.6;">${n.questions}</div></div>` : ''}
+        </div>
+      </div>
+    `).join('') : `<div style="color:var(--muted);font-size:0.85rem;padding:20px 0;">No notes yet${activeLearnFilter !== 'all' ? ' for this topic' : ''}. Hit + New Note to start building your knowledge base.</div>`;
+  }
+
+  function toggleLearnExpand(i) {
+    const el = document.getElementById('learn-expand-' + i);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  renderLearnNotes();
+
+</script>
+</body>
+</html>
