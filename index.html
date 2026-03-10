@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="icon" href="https://fav.farm/🥐" type="image/png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Macro Radar</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -19,6 +20,44 @@
     --green: #6ec8a0;
     --red: #c86e6e;
   }
+
+
+  /* LIGHT MODE */
+  body.light {
+    --bg: #f5f2ec;
+    --surface: #ffffff;
+    --surface2: #edeae3;
+    --border: #d8d3c8;
+    --accent: #a67c3d;
+    --accent2: #3a6ea8;
+    --accent3: #a83a5c;
+    --text: #1a1a1a;
+    --muted: #888070;
+    --green: #2e8a60;
+    --red: #a83a3a;
+  }
+  body.light::before {
+    background-image:
+      linear-gradient(rgba(166,124,61,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(166,124,61,0.05) 1px, transparent 1px);
+  }
+  .theme-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -677,7 +716,10 @@
       <h1>macro radar</h1>
       <p>Connect the dots · Build conviction · Track regime</p>
     </div>
-    <div class="date-badge" id="dateBadge"></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 dark</button>
+      <div class="date-badge" id="dateBadge"></div>
+    </div>
   </div>
 
   <!-- TABS -->
@@ -777,6 +819,17 @@
         </div>
         <div class="chain" id="implicationsList"></div>
       </div>
+    </div>
+
+    <!-- SNAPSHOTS -->
+    <div class="section-label" style="margin-top:24px;">Dashboard Snapshots</div>
+    <div class="card-full">
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Freeze the current dashboard state under a name. Come back later to compare how the macro regime has shifted.</p>
+      <div class="add-row" style="margin-bottom:16px;">
+        <input type="text" class="add-input" id="snapshotName" placeholder="e.g. Market in March 2026 — name this moment">
+        <button class="btn btn-primary" onclick="saveSnapshot()" style="font-size:0.6rem;">Save Snapshot</button>
+      </div>
+      <div id="snapshotList"></div>
     </div>
 
   </div>
@@ -1000,6 +1053,27 @@
     get: (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch(e) { return fallback; } },
     set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
   };
+
+  // ── THEME ────────────────────────────────────────────────────────
+  function applyTheme(mode) {
+    if (mode === 'light') {
+      document.body.classList.add('light');
+      const btn = document.getElementById('themeBtn');
+      if (btn) btn.innerHTML = '🫧 light';
+    } else {
+      document.body.classList.remove('light');
+      const btn = document.getElementById('themeBtn');
+      if (btn) btn.innerHTML = '🌙 dark';
+    }
+  }
+  function toggleTheme() {
+    const isLight = document.body.classList.contains('light');
+    const next = isLight ? 'dark' : 'light';
+    LS.set('theme', next);
+    applyTheme(next);
+  }
+  // Restore saved theme on load
+  applyTheme(LS.get('theme', 'dark'));
 
   // ── DATE ─────────────────────────────────────────────────────────
   const now = new Date();
@@ -1439,3 +1513,116 @@
 </script>
 </body>
 </html>
+<script>
+  // ── SNAPSHOTS ────────────────────────────────────────────────────
+  let snapshots = LS.get('snapshots', []);
+
+  function captureCurrentState() {
+    const regime = {};
+    ['growthCycle','inflationRegime','cbStance','riskAppetite','dollarTrend','geoStress'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) regime[id] = el.value;
+    });
+    const summaryEl = document.getElementById('regimeSummary');
+    return {
+      regime,
+      summary: summaryEl ? summaryEl.value : '',
+      indicators: JSON.parse(JSON.stringify(indicators)),
+      implications: JSON.parse(JSON.stringify(implications)),
+    };
+  }
+
+  function saveSnapshot() {
+    const name = document.getElementById('snapshotName').value.trim();
+    if (!name) return;
+    snapshots.unshift({
+      id: Date.now(),
+      name,
+      date: new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}),
+      state: captureCurrentState(),
+    });
+    LS.set('snapshots', snapshots);
+    document.getElementById('snapshotName').value = '';
+    renderSnapshots();
+  }
+
+  function deleteSnapshot(i) {
+    snapshots.splice(i, 1);
+    LS.set('snapshots', snapshots);
+    renderSnapshots();
+  }
+
+  function restoreSnapshot(i) {
+    const s = snapshots[i].state;
+    // Restore regime dropdowns
+    Object.entries(s.regime).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+    saveRegime();
+    // Restore summary
+    const summaryEl = document.getElementById('regimeSummary');
+    if (summaryEl) { summaryEl.value = s.summary; LS.set('regimeSummary', s.summary); }
+    // Restore indicators
+    indicators.forEach((ind, i) => {
+      if (s.indicators[i]) { ind.val = s.indicators[i].val; ind.signal = s.indicators[i].signal; }
+    });
+    LS.set('indicators', indicators);
+    renderIndicators();
+    // Restore implications
+    implications.forEach((imp, i) => { if (s.implications[i]) imp.text = s.implications[i].text; });
+    LS.set('implications', implications);
+    renderImplications();
+    renderSnapshots();
+  }
+
+  function toggleSnapshotExpand(i) {
+    const el = document.getElementById('snap-expand-' + i);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function renderSnapshots() {
+    const el = document.getElementById('snapshotList');
+    if (!el) return;
+    el.innerHTML = snapshots.length ? snapshots.map((snap, i) => {
+      const s = snap.state;
+      return `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div>
+              <span style="font-family:'Playfair Display',serif;font-size:0.95rem;color:var(--text);">${snap.name}</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);margin-left:10px;">${snap.date}</span>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button onclick="toggleSnapshotExpand(${i})" class="btn btn-ghost" style="font-size:0.55rem;padding:5px 10px;">View</button>
+              <button onclick="restoreSnapshot(${i})" class="btn btn-ghost" style="font-size:0.55rem;padding:5px 10px;color:var(--accent);border-color:var(--accent);">Restore</button>
+              <button onclick="deleteSnapshot(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;padding:2px 6px;">✕</button>
+            </div>
+          </div>
+          ${s.summary ? `<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:8px;">"${s.summary.substring(0,120)}${s.summary.length>120?'...':''}"</div>` : ''}
+          <div id="snap-expand-${i}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+              ${Object.entries(s.regime).map(([k,v]) => `
+                <div style="background:var(--surface);border-radius:5px;padding:8px 10px;">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">${k.replace(/([A-Z])/g,' $1').trim()}</div>
+                  <div style="font-size:0.78rem;color:var(--text);">${v}</div>
+                </div>
+              `).join('')}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${s.indicators.map(ind => `
+                <div style="background:var(--surface);border-radius:5px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);">${ind.name}</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text);">${ind.val}</span>
+                  <span style="width:7px;height:7px;border-radius:50%;background:${ind.signal==='bullish'?'var(--green)':ind.signal==='bearish'?'var(--red)':ind.signal==='watch'?'var(--accent)':'var(--muted)'};display:inline-block;"></span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('') : '<div style="color:var(--muted);font-size:0.8rem;padding:8px 0;">No snapshots yet — set your dashboard, name it, and hit Save Snapshot.</div>';
+  }
+
+  renderSnapshots();
+</script>
