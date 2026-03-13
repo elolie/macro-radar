@@ -5,1624 +5,595 @@
 <link rel="icon" href="https://fav.farm/🥐" type="image/png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Macro Radar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0d0f14;
-    --surface: #13161e;
-    --surface2: #1a1e2a;
-    --border: #252a38;
-    --accent: #c8a96e;
-    --accent2: #6e9ec8;
-    --accent3: #c86e8a;
-    --text: #e8e4da;
-    --muted: #7a7f8e;
-    --green: #6ec8a0;
-    --red: #c86e6e;
-  }
+:root {
+  --bg:#0d0f14; --surface:#13161e; --surface2:#1a1e2a; --border:#252a38;
+  --accent:#c8a96e; --accent2:#6e9ec8; --accent3:#c86e8a;
+  --text:#e8e4da; --muted:#7a7f8e; --green:#6ec8a0; --red:#c86e6e;
+}
+body.light {
+  --bg:#f5f2ec; --surface:#ffffff; --surface2:#edeae3; --border:#d8d3c8;
+  --accent:#a67c3d; --accent2:#3a6ea8; --accent3:#a83a5c;
+  --text:#1a1a1a; --muted:#888070; --green:#2e8a60; --red:#a83a3a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-weight:300;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(200,169,110,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(200,169,110,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+body.light::before{background-image:linear-gradient(rgba(166,124,61,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(166,124,61,0.05) 1px,transparent 1px)}
+.app{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 24px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:48px;padding-bottom:32px;border-bottom:1px solid var(--border)}
+.header h1{font-family:'Playfair Display',serif;font-size:2rem;color:var(--accent);letter-spacing:-0.5px}
+.header p{color:var(--muted);font-size:0.75rem;font-family:'IBM Plex Mono',monospace;margin-top:6px;letter-spacing:1px;text-transform:uppercase}
+.date-badge{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--muted);text-align:right;line-height:1.8}
+.theme-toggle{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:1px;display:flex;align-items:center;gap:6px;transition:all 0.2s;white-space:nowrap}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.tabs{display:flex;gap:2px;margin-bottom:32px;background:var(--surface);padding:4px;border-radius:8px;border:1px solid var(--border)}
+.tab{flex:1;padding:10px 8px;background:none;border:none;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:5px;transition:all 0.2s}
+.tab.active{background:var(--surface2);color:var(--accent);border:1px solid var(--border)}
+.tab:hover:not(.active){color:var(--text)}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}
+.card-full{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.card-title{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.card-accent{color:var(--accent)}
+.section-label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.regime-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.regime-item{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;transition:all 0.2s}
+.regime-item:hover{border-color:var(--accent)}
+.regime-item label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:4px}
+.regime-item select{background:none;border:none;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:0.85rem;width:100%;outline:none;cursor:pointer}
+.regime-item select option{background:var(--surface2)}
+.indicators-list{display:flex;flex-direction:column;gap:10px}
+.indicator-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.indicator-row:last-child{border-bottom:none}
+.indicator-name{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--muted)}
+.indicator-controls{display:flex;align-items:center;gap:8px}
+.indicator-val{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text);width:60px;text-align:right;background:none;border:none;outline:none}
+.signal-dot{width:8px;height:8px;border-radius:50%;cursor:pointer;flex-shrink:0}
+.signal-neutral{background:var(--muted)}.signal-bullish{background:var(--green)}.signal-bearish{background:var(--red)}.signal-watch{background:var(--accent)}
+.chain{display:flex;flex-direction:column}
+.chain-node{display:flex;align-items:flex-start;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)}
+.chain-node:last-child{border-bottom:none}
+.chain-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--accent);width:20px;flex-shrink:0;padding-top:2px}
+.chain-content{flex:1}
+.chain-label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:3px}
+.chain-text{font-size:0.85rem;color:var(--text);background:none;border:none;width:100%;outline:none;font-family:'IBM Plex Sans',sans-serif;font-weight:300}
+.chain-arrow{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--accent2);padding-top:2px;flex-shrink:0}
+.journal-list{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.journal-entry{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;transition:border-color 0.2s}
+.journal-entry:hover{border-color:var(--accent)}
+.journal-entry-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.journal-entry-date{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--accent);letter-spacing:1px}
+.journal-entry-tags{display:flex;gap:6px}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:0.55rem;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:3px;border:1px solid var(--border);color:var(--muted)}
+.tag.rates{border-color:var(--accent2);color:var(--accent2)}.tag.fx{border-color:var(--accent);color:var(--accent)}.tag.geo{border-color:var(--accent3);color:var(--accent3)}.tag.inflation{border-color:var(--red);color:var(--red)}.tag.fiscal{border-color:var(--green);color:var(--green)}
+.journal-entry-title{font-family:'Playfair Display',serif;font-size:1rem;color:var(--text);margin-bottom:4px}
+.journal-entry-preview{font-size:0.78rem;color:var(--muted);line-height:1.5}
+.new-entry-form{background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:24px;margin-bottom:20px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted)}
+.form-input{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:0.85rem;outline:none;transition:border-color 0.2s}
+.form-input:focus{border-color:var(--accent)}
+.form-textarea{min-height:90px;resize:vertical;font-weight:300;line-height:1.6}
+.tags-select{display:flex;gap:6px;flex-wrap:wrap}
+.tag-toggle{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);color:var(--muted);background:none;cursor:pointer;transition:all 0.2s}
+.tag-toggle.active.rates{border-color:var(--accent2);color:var(--accent2);background:rgba(110,158,200,0.1)}
+.tag-toggle.active.fx{border-color:var(--accent);color:var(--accent);background:rgba(200,169,110,0.1)}
+.tag-toggle.active.geo{border-color:var(--accent3);color:var(--accent3);background:rgba(200,110,138,0.1)}
+.tag-toggle.active.inflation{border-color:var(--red);color:var(--red);background:rgba(200,110,110,0.1)}
+.tag-toggle.active.fiscal{border-color:var(--green);color:var(--green);background:rgba(110,200,160,0.1)}
+.btn{padding:10px 20px;border-radius:6px;border:none;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.2s}
+.btn-primary{background:var(--accent);color:var(--bg);font-weight:500}.btn-primary:hover{opacity:0.85}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--muted)}.btn-ghost:hover{border-color:var(--text);color:var(--text)}
+.btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.checklist{display:flex;flex-direction:column;gap:6px}
+.check-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);cursor:pointer;transition:all 0.2s}
+.check-item:hover{border-color:var(--accent)}.check-item.done{opacity:0.5}
+.check-box{width:14px;height:14px;border:1px solid var(--muted);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--accent)}
+.check-item.done .check-box{background:rgba(200,169,110,0.15);border-color:var(--accent)}
+.check-text{font-size:0.8rem;color:var(--text)}
+.check-freq{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px}
+.connections-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.connection-cell{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px}
+.connection-from{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:4px}
+.connection-arrow{font-size:0.7rem;color:var(--muted);margin-bottom:4px}
+.connection-to{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent2);margin-bottom:8px}
+.connection-note{font-size:0.75rem;color:var(--text);background:none;border:none;width:100%;outline:none;font-family:'IBM Plex Sans',sans-serif;font-weight:300;resize:none;line-height:1.5;min-height:50px}
+.connection-note::placeholder{color:var(--border);font-style:italic}
+.hypothesis-list{display:flex;flex-direction:column;gap:10px}
+.hypothesis-item{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--muted);border-radius:0 8px 8px 0;padding:14px 16px;transition:all 0.2s}
+.hypothesis-item.open{border-left-color:var(--accent2)}.hypothesis-item.confirmed{border-left-color:var(--green)}.hypothesis-item.rejected{border-left-color:var(--red)}
+.hypothesis-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.hypothesis-text{font-size:0.85rem;color:var(--text);flex:1;background:none;border:none;outline:none;font-family:'IBM Plex Sans',sans-serif;font-weight:300}
+.hypothesis-status{font-family:'IBM Plex Mono',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:1px;padding:3px 8px;border-radius:3px;cursor:pointer;flex-shrink:0;margin-left:12px}
+.status-open{background:rgba(110,158,200,0.15);color:var(--accent2)}.status-confirmed{background:rgba(110,200,160,0.15);color:var(--green)}.status-rejected{background:rgba(200,110,110,0.15);color:var(--red)}
+.hypothesis-meta{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted)}
+.add-row{display:flex;gap:8px;margin-top:12px}
+.add-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:0.85rem;font-weight:300;outline:none;transition:border-color 0.2s}
+.add-input:focus{border-color:var(--accent)}
+.add-input::placeholder{color:var(--muted);font-style:italic}
+.narrative-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.narrative-box textarea{width:100%;background:none;border:none;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:0.9rem;font-weight:300;resize:none;outline:none;line-height:1.7;min-height:80px}
+.narrative-box textarea::placeholder{color:var(--muted);font-style:italic}
+.footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.footer-text{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);letter-spacing:1px}
+.streak{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--accent)}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-
-  /* LIGHT MODE */
-  body.light {
-    --bg: #f5f2ec;
-    --surface: #ffffff;
-    --surface2: #edeae3;
-    --border: #d8d3c8;
-    --accent: #a67c3d;
-    --accent2: #3a6ea8;
-    --accent3: #a83a5c;
-    --text: #1a1a1a;
-    --muted: #888070;
-    --green: #2e8a60;
-    --red: #a83a3a;
-  }
-  body.light::before {
-    background-image:
-      linear-gradient(rgba(166,124,61,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(166,124,61,0.05) 1px, transparent 1px);
-  }
-  .theme-toggle {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 5px 12px;
-    cursor: pointer;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--muted);
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-weight: 300;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* GRID BACKGROUND */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: 
-      linear-gradient(rgba(200,169,110,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(200,169,110,0.03) 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .app {
-    position: relative;
-    z-index: 1;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 40px 24px;
-  }
-
-  /* HEADER */
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 48px;
-    padding-bottom: 32px;
-    border-bottom: 1px solid var(--border);
-  }
-  .header-left h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 2rem;
-    color: var(--accent);
-    letter-spacing: -0.5px;
-    line-height: 1.1;
-  }
-  .header-left p {
-    color: var(--muted);
-    font-size: 0.75rem;
-    font-family: 'IBM Plex Mono', monospace;
-    margin-top: 6px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .date-badge {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--muted);
-    text-align: right;
-    line-height: 1.8;
-  }
-
-  /* NAV TABS */
-  .tabs {
-    display: flex;
-    gap: 2px;
-    margin-bottom: 32px;
-    background: var(--surface);
-    padding: 4px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-  }
-  .tab {
-    flex: 1;
-    padding: 10px 8px;
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: all 0.2s;
-  }
-  .tab.active {
-    background: var(--surface2);
-    color: var(--accent);
-    border: 1px solid var(--border);
-  }
-  .tab:hover:not(.active) { color: var(--text); }
-
-  /* PANELS */
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  /* DASHBOARD */
-  .dashboard-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-  }
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-  .card-title {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .card-accent { color: var(--accent); }
-
-  /* REGIME COMPASS */
-  .regime-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .regime-item {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .regime-item:hover { border-color: var(--accent); }
-  .regime-item.selected { border-color: var(--accent); background: rgba(200,169,110,0.08); }
-  .regime-item label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--muted);
-    display: block;
-    margin-bottom: 4px;
-    cursor: pointer;
-  }
-  .regime-item select, .regime-item input {
-    background: none;
-    border: none;
-    color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 0.85rem;
-    width: 100%;
-    outline: none;
-    cursor: pointer;
-  }
-  .regime-item select option { background: var(--surface2); }
-
-  /* DASHBOARD INDICATORS */
-  .indicators-list { display: flex; flex-direction: column; gap: 10px; }
-  .indicator-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .indicator-row:last-child { border-bottom: none; }
-  .indicator-name {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--muted);
-  }
-  .indicator-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .indicator-val {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--text);
-    width: 60px;
-    text-align: right;
-    background: none;
-    border: none;
-    outline: none;
-  }
-  .signal-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  .signal-neutral { background: var(--muted); }
-  .signal-bullish { background: var(--green); }
-  .signal-bearish { background: var(--red); }
-  .signal-watch { background: var(--accent); }
-
-  /* NARRATIVE BOX */
-  .narrative-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 16px;
-  }
-  .narrative-box textarea {
-    width: 100%;
-    background: none;
-    border: none;
-    color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 300;
-    resize: none;
-    outline: none;
-    line-height: 1.7;
-    min-height: 80px;
-  }
-  .narrative-box textarea::placeholder { color: var(--muted); font-style: italic; }
-
-  /* CHAIN REACTION */
-  .chain {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-  .chain-node {
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .chain-node:last-child { border-bottom: none; }
-  .chain-node:hover .chain-content { opacity: 1; }
-  .chain-num {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--accent);
-    width: 20px;
-    flex-shrink: 0;
-    padding-top: 2px;
-  }
-  .chain-content { flex: 1; }
-  .chain-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--muted);
-    margin-bottom: 3px;
-  }
-  .chain-text {
-    font-size: 0.85rem;
-    color: var(--text);
-    background: none;
-    border: none;
-    width: 100%;
-    outline: none;
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-weight: 300;
-  }
-  .chain-text::placeholder { color: var(--border); }
-  .chain-arrow {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--accent2);
-    padding-top: 2px;
-    flex-shrink: 0;
-  }
-
-  /* JOURNAL */
-  .journal-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-  .journal-entry {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 20px;
-    cursor: pointer;
-    transition: border-color 0.2s;
-  }
-  .journal-entry:hover { border-color: var(--accent); }
-  .journal-entry-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-  }
-  .journal-entry-date {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--accent);
-    letter-spacing: 1px;
-  }
-  .journal-entry-tags {
-    display: flex;
-    gap: 6px;
-  }
-  .tag {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.55rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 2px 7px;
-    border-radius: 3px;
-    border: 1px solid var(--border);
-    color: var(--muted);
-  }
-  .tag.rates { border-color: var(--accent2); color: var(--accent2); }
-  .tag.fx { border-color: var(--accent); color: var(--accent); }
-  .tag.geo { border-color: var(--accent3); color: var(--accent3); }
-  .tag.inflation { border-color: var(--red); color: var(--red); }
-  .tag.fiscal { border-color: var(--green); color: var(--green); }
-  .journal-entry-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1rem;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-  .journal-entry-preview {
-    font-size: 0.78rem;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-
-  /* NEW ENTRY FORM */
-  .new-entry-form {
-    background: var(--surface);
-    border: 1px solid var(--accent);
-    border-radius: 10px;
-    padding: 24px;
-    margin-bottom: 20px;
-  }
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
-  .form-field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .form-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--muted);
-  }
-  .form-input {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 8px 10px;
-    color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 0.85rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .form-input:focus { border-color: var(--accent); }
-  .form-textarea {
-    min-height: 90px;
-    resize: vertical;
-    font-weight: 300;
-    line-height: 1.6;
-  }
-  .tags-select {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .tag-toggle {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    background: none;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .tag-toggle.active.rates { border-color: var(--accent2); color: var(--accent2); background: rgba(110,158,200,0.1); }
-  .tag-toggle.active.fx { border-color: var(--accent); color: var(--accent); background: rgba(200,169,110,0.1); }
-  .tag-toggle.active.geo { border-color: var(--accent3); color: var(--accent3); background: rgba(200,110,138,0.1); }
-  .tag-toggle.active.inflation { border-color: var(--red); color: var(--red); background: rgba(200,110,110,0.1); }
-  .tag-toggle.active.fiscal { border-color: var(--green); color: var(--green); background: rgba(110,200,160,0.1); }
-
-  /* BUTTONS */
-  .btn {
-    padding: 10px 20px;
-    border-radius: 6px;
-    border: none;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-primary {
-    background: var(--accent);
-    color: var(--bg);
-    font-weight: 500;
-  }
-  .btn-primary:hover { opacity: 0.85; }
-  .btn-ghost {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--muted);
-  }
-  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
-  .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
-
-  /* CHECKLIST */
-  .checklist { display: flex; flex-direction: column; gap: 6px; }
-  .check-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background: var(--surface2);
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .check-item:hover { border-color: var(--accent); }
-  .check-item.done { opacity: 0.5; }
-  .check-box {
-    width: 14px; height: 14px;
-    border: 1px solid var(--muted);
-    border-radius: 3px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    color: var(--accent);
-    transition: all 0.2s;
-  }
-  .check-item.done .check-box {
-    background: rgba(200,169,110,0.15);
-    border-color: var(--accent);
-  }
-  .check-text {
-    font-size: 0.8rem;
-    color: var(--text);
-  }
-  .check-freq {
-    margin-left: auto;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--muted);
-    letter-spacing: 1px;
-  }
-
-  /* SECTION HEADERS */
-  .section-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: var(--muted);
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .section-label::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  /* FULL WIDTH CARD */
-  .card-full {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 16px;
-  }
-
-  /* CONNECTIONS MAP */
-  .connections-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
-  }
-  .connection-cell {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px;
-  }
-  .connection-from {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--accent);
-    margin-bottom: 4px;
-  }
-  .connection-arrow {
-    font-size: 0.7rem;
-    color: var(--muted);
-    margin-bottom: 4px;
-  }
-  .connection-to {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--accent2);
-    margin-bottom: 8px;
-  }
-  .connection-note {
-    font-size: 0.75rem;
-    color: var(--text);
-    background: none;
-    border: none;
-    width: 100%;
-    outline: none;
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-weight: 300;
-    resize: none;
-    line-height: 1.5;
-    min-height: 50px;
-  }
-  .connection-note::placeholder { color: var(--border); font-style: italic; }
-
-  /* HYPOTHESIS TRACKER */
-  .hypothesis-list { display: flex; flex-direction: column; gap: 10px; }
-  .hypothesis-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--muted);
-    border-radius: 0 8px 8px 0;
-    padding: 14px 16px;
-    transition: all 0.2s;
-  }
-  .hypothesis-item.open { border-left-color: var(--accent2); }
-  .hypothesis-item.confirmed { border-left-color: var(--green); }
-  .hypothesis-item.rejected { border-left-color: var(--red); }
-  .hypothesis-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-  }
-  .hypothesis-text {
-    font-size: 0.85rem;
-    color: var(--text);
-    flex: 1;
-    background: none;
-    border: none;
-    outline: none;
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-weight: 300;
-  }
-  .hypothesis-status {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.55rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    cursor: pointer;
-    flex-shrink: 0;
-    margin-left: 12px;
-  }
-  .status-open { background: rgba(110,158,200,0.15); color: var(--accent2); }
-  .status-confirmed { background: rgba(110,200,160,0.15); color: var(--green); }
-  .status-rejected { background: rgba(200,110,110,0.15); color: var(--red); }
-  .hypothesis-meta {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--muted);
-  }
-
-  /* ADD HYPOTHESIS */
-  .add-row {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-  }
-  .add-input {
-    flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px 12px;
-    color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 300;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .add-input:focus { border-color: var(--accent); }
-  .add-input::placeholder { color: var(--muted); font-style: italic; }
-
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* FOOTER */
-  .footer {
-    margin-top: 48px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .footer-text {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--muted);
-    letter-spacing: 1px;
-  }
-  .streak {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--accent);
-  }
+/* MAP */
+#panel-map.active { display:block; }
+#mapWrap {
+  position:relative; width:100%; height:620px;
+  background:transparent; overflow:hidden;
+}
+#mapWrap svg { position:absolute; top:0; left:0; display:block; }
+#mapTopBar {
+  display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap; margin-bottom:16px;
+}
+#mapDetailPanel {
+  position:absolute; right:0; top:0; bottom:0; width:300px;
+  background:#13161e; border-left:1px solid #252a38;
+  transform:translateX(100%); transition:transform 0.3s ease;
+  overflow-y:auto; padding:56px 20px 24px; z-index:10;
+}
+#mapDetailPanel.open { transform:translateX(0); }
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- HEADER -->
-  <div class="header">
-    <div class="header-left">
-      <h1>macro radar</h1>
-      <p>Connect the dots · Build conviction · Track regime</p>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
-      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 dark</button>
-      <div class="date-badge" id="dateBadge"></div>
-    </div>
+<div class="header">
+  <div>
+    <h1>macro radar</h1>
+    <p>Connect the dots · Build conviction · Track regime</p>
   </div>
-
-  <!-- TABS -->
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
-    <button class="tab" onclick="switchTab('chain')">Chain Reaction</button>
-    <button class="tab" onclick="switchTab('journal')">Journal</button>
-    <button class="tab" onclick="switchTab('hypothesis')">Hypotheses</button>
-    <button class="tab" onclick="switchTab('routine')">Routine</button>
-    <button class="tab" onclick="switchTab('learning')">Learning</button>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 dark</button>
+    <div class="date-badge" id="dateBadge"></div>
   </div>
-
-  <!-- DASHBOARD PANEL -->
-  <div id="panel-dashboard" class="panel active">
-
-    <div class="section-label">Current Macro Regime</div>
-    <div class="card-full" style="margin-bottom:24px;">
-      <div class="regime-grid" style="margin-bottom:16px;">
-        <div class="regime-item">
-          <label>Growth Cycle</label>
-          <select id="growthCycle">
-            <option>Early Expansion</option>
-            <option>Mid Expansion</option>
-            <option selected>Late Cycle</option>
-            <option>Slowdown</option>
-            <option>Recession</option>
-            <option>Recovery</option>
-          </select>
-        </div>
-        <div class="regime-item">
-          <label>Inflation Regime</label>
-          <select id="inflationRegime">
-            <option>Deflationary</option>
-            <option>Low &amp; Stable</option>
-            <option>Rising</option>
-            <option selected>Elevated / Sticky</option>
-            <option>Falling</option>
-          </select>
-        </div>
-        <div class="regime-item">
-          <label>Central Bank Stance</label>
-          <select id="cbStance">
-            <option>Aggressively Tightening</option>
-            <option selected>On Hold</option>
-            <option>Pivoting Dovish</option>
-            <option>Cutting</option>
-            <option>Aggressively Easing</option>
-          </select>
-        </div>
-        <div class="regime-item">
-          <label>Risk Appetite</label>
-          <select id="riskAppetite">
-            <option>Risk-On</option>
-            <option selected>Neutral / Mixed</option>
-            <option>Risk-Off</option>
-            <option>Stress / Crisis</option>
-          </select>
-        </div>
-        <div class="regime-item">
-          <label>Dollar Trend</label>
-          <select id="dollarTrend">
-            <option>Strong Bull</option>
-            <option selected>Moderately Strong</option>
-            <option>Range-Bound</option>
-            <option>Weakening</option>
-            <option>Bear</option>
-          </select>
-        </div>
-        <div class="regime-item">
-          <label>Geopolitical Stress</label>
-          <select id="geoStress">
-            <option>Low</option>
-            <option>Moderate</option>
-            <option selected>Elevated</option>
-            <option>High / Crisis</option>
-          </select>
-        </div>
-      </div>
-      <div class="section-label" style="margin-bottom:10px;">One-Sentence Regime Summary</div>
-      <div style="background:var(--surface2);border-radius:6px;border:1px solid var(--border);padding:12px;">
-        <textarea id="regimeSummary" rows="2" placeholder="e.g. Late-cycle economy with sticky services inflation, Fed on hold, elevated geopolitical risk keeping dollar bid and risk appetite suppressed..." style="width:100%;background:none;border:none;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:0.85rem;font-weight:300;resize:none;outline:none;line-height:1.7;"></textarea>
-      </div>
-    </div>
-
-    <div class="dashboard-grid">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Key Indicators</span>
-          <span class="card-title card-accent">Signal</span>
-        </div>
-        <div class="indicators-list" id="indicatorsList"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Market Implications</span>
-        </div>
-        <div class="chain" id="implicationsList"></div>
-      </div>
-    </div>
-
-    <!-- SNAPSHOTS -->
-    <div class="section-label" style="margin-top:24px;">Dashboard Snapshots</div>
-    <div class="card-full">
-      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Freeze the current dashboard state under a name. Come back later to compare how the macro regime has shifted.</p>
-      <div class="add-row" style="margin-bottom:16px;">
-        <input type="text" class="add-input" id="snapshotName" placeholder="e.g. Market in March 2026 — name this moment">
-        <button class="btn btn-primary" onclick="saveSnapshot()" style="font-size:0.6rem;">Save Snapshot</button>
-      </div>
-      <div id="snapshotList"></div>
-    </div>
-
-  </div>
-
-  <!-- CHAIN REACTION PANEL -->
-  <div id="panel-chain" class="panel">
-
-    <div class="section-label">Transmission Chain Builder</div>
-    <div class="card-full" style="margin-bottom:20px;">
-      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Map how a macro event flows through the system. Fill in the chain — each step triggers the next. This builds your intuition for transmission mechanisms.</p>
-      <div class="chain" id="chainNodes"></div>
-      <div style="margin-top:16px;">
-        <button class="btn btn-ghost" onclick="addChainNode()" style="font-size:0.6rem;">+ Add Step</button>
-        <button class="btn btn-ghost" onclick="clearChain()" style="font-size:0.6rem;margin-left:6px;">Clear</button>
-        <button class="btn btn-primary" onclick="loadTemplate()" style="font-size:0.6rem;float:right;">Load Template</button>
-      </div>
-    </div>
-
-    <div class="section-label">Cross-Asset Connections</div>
-    <div class="connections-grid">
-      <div class="connection-cell">
-        <div class="connection-from">Rates ↑</div>
-        <div class="connection-arrow">→ affects →</div>
-        <div class="connection-to">Equities</div>
-        <textarea class="connection-note" placeholder="Higher discount rate compresses PE multiples, especially growth stocks..."></textarea>
-      </div>
-      <div class="connection-cell">
-        <div class="connection-from">Dollar ↑</div>
-        <div class="connection-arrow">→ affects →</div>
-        <div class="connection-to">EM Assets</div>
-        <textarea class="connection-note" placeholder="Dollar strength tightens financial conditions in EM, raises debt servicing costs..."></textarea>
-      </div>
-      <div class="connection-cell">
-        <div class="connection-from">Oil ↑</div>
-        <div class="connection-arrow">→ affects →</div>
-        <div class="connection-to">Inflation / Policy</div>
-        <textarea class="connection-note" placeholder="Energy costs feed into CPI, complicates Fed's ability to cut..."></textarea>
-      </div>
-      <div class="connection-cell">
-        <div class="connection-from">Yield Curve</div>
-        <div class="connection-arrow">→ signals →</div>
-        <div class="connection-to">Credit / Recession</div>
-        <textarea class="connection-note" placeholder="Inversion signals tight policy is biting. Watch for uninversion — that's when recession risk spikes..."></textarea>
-      </div>
-      <div class="connection-cell">
-        <div class="connection-from">Geopolitics</div>
-        <div class="connection-arrow">→ affects →</div>
-        <div class="connection-to">Capital Flows</div>
-        <textarea class="connection-note" placeholder="Risk events push capital to safe havens: USD, Treasuries, gold. Watch DXY spike as proxy..."></textarea>
-      </div>
-      <div class="connection-cell">
-        <div class="connection-from">Fiscal Expansion</div>
-        <div class="connection-arrow">→ affects →</div>
-        <div class="connection-to">Rates / Inflation</div>
-        <textarea class="connection-note" placeholder="Large deficits keep long-end yields elevated even when Fed cuts. Term premium rises..."></textarea>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- JOURNAL PANEL -->
-  <div id="panel-journal" class="panel">
-
-    <div id="journalNewForm" style="display:none;">
-      <div class="new-entry-form">
-        <div class="form-row">
-          <div class="form-field">
-            <span class="form-label">Event / Trigger</span>
-            <input type="text" id="entryTitle" class="form-input" placeholder="e.g. Fed holds rates, signals 2 cuts in 2025">
-          </div>
-          <div class="form-field">
-            <span class="form-label">Date</span>
-            <input type="date" id="entryDate" class="form-input">
-          </div>
-        </div>
-        <div class="form-field" style="margin-bottom:12px;">
-          <span class="form-label">Tags</span>
-          <div class="tags-select">
-            <button class="tag-toggle rates" onclick="toggleTag(this,'rates')">Rates</button>
-            <button class="tag-toggle fx" onclick="toggleTag(this,'fx')">FX</button>
-            <button class="tag-toggle inflation" onclick="toggleTag(this,'inflation')">Inflation</button>
-            <button class="tag-toggle geo" onclick="toggleTag(this,'geo')">Geopolitics</button>
-            <button class="tag-toggle fiscal" onclick="toggleTag(this,'fiscal')">Fiscal</button>
-          </div>
-        </div>
-        <div class="form-field" style="margin-bottom:12px;">
-          <span class="form-label">What happened & why it matters</span>
-          <textarea id="entryWhat" class="form-input form-textarea" placeholder="Describe the event and the macro significance..."></textarea>
-        </div>
-        <div class="form-field" style="margin-bottom:12px;">
-          <span class="form-label">Chain reaction — what does this trigger?</span>
-          <textarea id="entryChain" class="form-input form-textarea" placeholder="If this, then... walk through the transmission mechanism..."></textarea>
-        </div>
-        <div class="form-field" style="margin-bottom:12px;">
-          <span class="form-label">My prior view vs. what actually happened</span>
-          <textarea id="entryPrior" class="form-input" style="min-height:60px;" placeholder="I expected X, but Y happened because..."></textarea>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-ghost" onclick="toggleNewEntry()">Cancel</button>
-          <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
-        </div>
-      </div>
-    </div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div class="section-label" style="margin-bottom:0;flex:1;">Journal Entries</div>
-      <button class="btn btn-primary" onclick="toggleNewEntry()" style="font-size:0.6rem;">+ New Entry</button>
-    </div>
-
-    <div class="journal-list" id="journalList"></div>
-
-  </div>
-
-  <!-- HYPOTHESIS PANEL -->
-  <div id="panel-hypothesis" class="panel">
-
-    <div class="section-label">Active Hypotheses</div>
-    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Write your macro views as testable hypotheses. Track them over time. Being wrong is valuable — understanding <em>why</em> you were wrong is how intuition gets built.</p>
-
-    <div class="hypothesis-list" id="hypothesisList"></div>
-
-    <div class="add-row">
-      <input type="text" class="add-input" id="newHypothesis" placeholder="e.g. If the Fed cuts before inflation hits 2%, long-end yields will sell off as term premium rises...">
-      <button class="btn btn-primary" onclick="addHypothesis()" style="font-size:0.6rem;">Add</button>
-    </div>
-
-  </div>
-
-  <!-- ROUTINE PANEL -->
-  <div id="panel-routine" class="panel">
-
-    <div class="section-label">Weekly Rhythm</div>
-    <div class="card-full" style="margin-bottom:20px;">
-      <div class="checklist" id="routineChecklist"></div>
-    </div>
-
-    <div class="section-label">Quarterly Deep Work</div>
-    <div class="card-full" style="margin-bottom:20px;">
-      <div class="checklist" id="quarterlyChecklist"></div>
-    </div>
-
-    <div class="section-label">This Week's Focus</div>
-    <div class="narrative-box">
-      <textarea rows="4" placeholder="What's the one macro question you want to answer this week? What data releases are important? What's your view going in?"></textarea>
-    </div>
-
-  </div>
-
-  <!-- LEARNING PANEL -->
-  <div id="panel-learning" class="panel">
-
-    <div id="learningNewForm" style="display:none;">
-      <div class="new-entry-form">
-        <div class="form-row">
-          <div class="form-field">
-            <span class="form-label">Title</span>
-            <input type="text" id="learnTitle" class="form-input" placeholder="e.g. How the yield curve predicts recessions">
-          </div>
-          <div class="form-field">
-            <span class="form-label">Source</span>
-            <input type="text" id="learnSource" class="form-input" placeholder="e.g. The Economist, VoxEU, Dalio">
-          </div>
-        </div>
-        <div class="form-field" style="margin-bottom:12px;">
-          <span class="form-label">Topic Tags</span>
-          <div class="tags-select">
-            <button class="tag-toggle rates" onclick="toggleLearnTag(this,'rates')">Rates</button>
-            <button class="tag-toggle fx" onclick="toggleLearnTag(this,'fx')">FX</button>
-            <button class="tag-toggle inflation" onclick="toggleLearnTag(this,'inflation')">Inflation</button>
-            <button class="tag-toggle geo" onclick="toggleLearnTag(this,'geo')">Geopolitics</button>
-            <button class="tag-toggle fiscal" onclick="toggleLearnTag(this,'fiscal')">Fiscal</button>
-          </div>
-        </div>
-        <div class="form-field" style="margin-bottom:12px;">
-          <span class="form-label">Key concept / what I learned</span>
-          <textarea id="learnConcept" class="form-input form-textarea" placeholder="The core idea in your own words..."></textarea>
-        </div>
-        <div class="form-field" style="margin-bottom:12px;">
-          <span class="form-label">How it connects to other things I know</span>
-          <textarea id="learnConnect" class="form-input form-textarea" placeholder="This relates to X because... This changes how I think about Y..."></textarea>
-        </div>
-        <div class="form-field" style="margin-bottom:12px;">
-          <span class="form-label">Questions this raised / things to explore further</span>
-          <textarea id="learnQuestions" class="form-input" style="min-height:60px;" placeholder="I still don't understand... I want to read more about..."></textarea>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-ghost" onclick="toggleNewLearn()">Cancel</button>
-          <button class="btn btn-primary" onclick="saveLearnNote()">Save Note</button>
-        </div>
-      </div>
-    </div>
-
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div class="section-label" style="margin-bottom:0;flex:1;">Learning Notes</div>
-      <button class="btn btn-primary" onclick="toggleNewLearn()" style="font-size:0.6rem;">+ New Note</button>
-    </div>
-
-    <div id="learnFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
-      <button class="tag-toggle active" onclick="filterLearn(this,'all')" style="border-color:var(--accent);color:var(--accent);">All</button>
-      <button class="tag-toggle rates" onclick="filterLearn(this,'rates')">Rates</button>
-      <button class="tag-toggle fx" onclick="filterLearn(this,'fx')">FX</button>
-      <button class="tag-toggle inflation" onclick="filterLearn(this,'inflation')">Inflation</button>
-      <button class="tag-toggle geo" onclick="filterLearn(this,'geo')">Geopolitics</button>
-      <button class="tag-toggle fiscal" onclick="filterLearn(this,'fiscal')">Fiscal</button>
-    </div>
-
-    <div class="journal-list" id="learnList"></div>
-
-  </div>
-
-  <div class="footer">
-    <span class="footer-text">Macro Radar · Personal</span>
-    <span class="streak" id="streakDisplay"></span>
-  </div>
-
 </div>
 
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
+  <button class="tab" onclick="switchTab('chain',this)">Chain Reaction</button>
+  <button class="tab" onclick="switchTab('journal',this)">Journal</button>
+  <button class="tab" onclick="switchTab('hypothesis',this)">Hypotheses</button>
+  <button class="tab" onclick="switchTab('routine',this)">Routine</button>
+  <button class="tab" onclick="switchTab('learning',this)">Learning</button>
+  <button class="tab" onclick="switchTab('map',this)">Map</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="panel-dashboard" class="panel active">
+  <div class="section-label">Current Macro Regime</div>
+  <div class="card-full" style="margin-bottom:24px;">
+    <div class="regime-grid" style="margin-bottom:16px;">
+      <div class="regime-item"><label>Growth Cycle</label><select id="growthCycle"><option>Early Expansion</option><option>Mid Expansion</option><option selected>Late Cycle</option><option>Slowdown</option><option>Recession</option><option>Recovery</option></select></div>
+      <div class="regime-item"><label>Inflation Regime</label><select id="inflationRegime"><option>Deflationary</option><option>Low &amp; Stable</option><option>Rising</option><option selected>Elevated / Sticky</option><option>Falling</option></select></div>
+      <div class="regime-item"><label>Central Bank Stance</label><select id="cbStance"><option>Aggressively Tightening</option><option selected>On Hold</option><option>Pivoting Dovish</option><option>Cutting</option><option>Aggressively Easing</option></select></div>
+      <div class="regime-item"><label>Risk Appetite</label><select id="riskAppetite"><option>Risk-On</option><option selected>Neutral / Mixed</option><option>Risk-Off</option><option>Stress / Crisis</option></select></div>
+      <div class="regime-item"><label>Dollar Trend</label><select id="dollarTrend"><option>Strong Bull</option><option selected>Moderately Strong</option><option>Range-Bound</option><option>Weakening</option><option>Bear</option></select></div>
+      <div class="regime-item"><label>Geopolitical Stress</label><select id="geoStress"><option>Low</option><option>Moderate</option><option selected>Elevated</option><option>High / Crisis</option></select></div>
+    </div>
+    <div class="section-label" style="margin-bottom:10px;">One-Sentence Regime Summary</div>
+    <div style="background:var(--surface2);border-radius:6px;border:1px solid var(--border);padding:12px;">
+      <textarea id="regimeSummary" rows="2" placeholder="e.g. Late-cycle economy with sticky inflation, Fed on hold..." style="width:100%;background:none;border:none;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:0.85rem;font-weight:300;resize:none;outline:none;line-height:1.7;"></textarea>
+    </div>
+  </div>
+  <div class="dashboard-grid">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Key Indicators</span><span class="card-title card-accent">Signal</span></div>
+      <div class="indicators-list" id="indicatorsList"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Market Implications</span></div>
+      <div class="chain" id="implicationsList"></div>
+    </div>
+  </div>
+  <div class="section-label" style="margin-top:24px;">Dashboard Snapshots</div>
+  <div class="card-full">
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Freeze the current dashboard state under a name.</p>
+    <div class="add-row" style="margin-bottom:16px;">
+      <input type="text" class="add-input" id="snapshotName" placeholder="e.g. Market in March 2026">
+      <button class="btn btn-primary" onclick="saveSnapshot()" style="font-size:0.6rem;">Save Snapshot</button>
+    </div>
+    <div id="snapshotList"></div>
+  </div>
+</div>
+
+<!-- CHAIN -->
+<div id="panel-chain" class="panel">
+  <div class="section-label">Transmission Chain Builder</div>
+  <div class="card-full" style="margin-bottom:20px;">
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Map how a macro event flows through the system.</p>
+    <div class="chain" id="chainNodes"></div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="addChainNode()" style="font-size:0.6rem;">+ Add Step</button>
+      <button class="btn btn-ghost" onclick="clearChain()" style="font-size:0.6rem;margin-left:6px;">Clear</button>
+      <button class="btn btn-primary" onclick="loadTemplate()" style="font-size:0.6rem;float:right;">Load Template</button>
+    </div>
+  </div>
+  <div class="section-label">Cross-Asset Connections</div>
+  <div class="connections-grid">
+    <div class="connection-cell"><div class="connection-from">Rates ↑</div><div class="connection-arrow">→ affects →</div><div class="connection-to">Equities</div><textarea class="connection-note" placeholder="Higher discount rate compresses PE multiples..."></textarea></div>
+    <div class="connection-cell"><div class="connection-from">Dollar ↑</div><div class="connection-arrow">→ affects →</div><div class="connection-to">EM Assets</div><textarea class="connection-note" placeholder="Dollar strength tightens EM financial conditions..."></textarea></div>
+    <div class="connection-cell"><div class="connection-from">Oil ↑</div><div class="connection-arrow">→ affects →</div><div class="connection-to">Inflation / Policy</div><textarea class="connection-note" placeholder="Energy costs feed into CPI..."></textarea></div>
+    <div class="connection-cell"><div class="connection-from">Yield Curve</div><div class="connection-arrow">→ signals →</div><div class="connection-to">Credit / Recession</div><textarea class="connection-note" placeholder="Inversion signals tight policy is biting..."></textarea></div>
+    <div class="connection-cell"><div class="connection-from">Geopolitics</div><div class="connection-arrow">→ affects →</div><div class="connection-to">Capital Flows</div><textarea class="connection-note" placeholder="Risk events push capital to safe havens..."></textarea></div>
+    <div class="connection-cell"><div class="connection-from">Fiscal Expansion</div><div class="connection-arrow">→ affects →</div><div class="connection-to">Rates / Inflation</div><textarea class="connection-note" placeholder="Large deficits keep long-end yields elevated..."></textarea></div>
+  </div>
+</div>
+
+<!-- JOURNAL -->
+<div id="panel-journal" class="panel">
+  <div id="journalNewForm" style="display:none;">
+    <div class="new-entry-form">
+      <div class="form-row">
+        <div class="form-field"><span class="form-label">Event / Trigger</span><input type="text" id="entryTitle" class="form-input" placeholder="e.g. Fed holds rates"></div>
+        <div class="form-field"><span class="form-label">Date</span><input type="date" id="entryDate" class="form-input"></div>
+      </div>
+      <div class="form-field" style="margin-bottom:12px;"><span class="form-label">Tags</span><div class="tags-select"><button class="tag-toggle rates" onclick="toggleTag(this,'rates')">Rates</button><button class="tag-toggle fx" onclick="toggleTag(this,'fx')">FX</button><button class="tag-toggle inflation" onclick="toggleTag(this,'inflation')">Inflation</button><button class="tag-toggle geo" onclick="toggleTag(this,'geo')">Geopolitics</button><button class="tag-toggle fiscal" onclick="toggleTag(this,'fiscal')">Fiscal</button></div></div>
+      <div class="form-field" style="margin-bottom:12px;"><span class="form-label">What happened & why it matters</span><textarea id="entryWhat" class="form-input form-textarea" placeholder="Describe the event..."></textarea></div>
+      <div class="form-field" style="margin-bottom:12px;"><span class="form-label">Chain reaction</span><textarea id="entryChain" class="form-input form-textarea" placeholder="If this, then..."></textarea></div>
+      <div class="form-field" style="margin-bottom:12px;"><span class="form-label">My prior view vs. what actually happened</span><textarea id="entryPrior" class="form-input" style="min-height:60px;" placeholder="I expected X, but Y happened..."></textarea></div>
+      <div class="btn-row"><button class="btn btn-ghost" onclick="toggleNewEntry()">Cancel</button><button class="btn btn-primary" onclick="saveEntry()">Save Entry</button></div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div class="section-label" style="margin-bottom:0;flex:1;">Journal Entries</div>
+    <button class="btn btn-primary" onclick="toggleNewEntry()" style="font-size:0.6rem;">+ New Entry</button>
+  </div>
+  <div class="journal-list" id="journalList"></div>
+</div>
+
+<!-- HYPOTHESIS -->
+<div id="panel-hypothesis" class="panel">
+  <div class="section-label">Active Hypotheses</div>
+  <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Write your macro views as testable hypotheses. Track them over time.</p>
+  <div class="hypothesis-list" id="hypothesisList"></div>
+  <div class="add-row">
+    <input type="text" class="add-input" id="newHypothesis" placeholder="e.g. If the Fed cuts before inflation hits 2%, long-end yields will sell off...">
+    <button class="btn btn-primary" onclick="addHypothesis()" style="font-size:0.6rem;">Add</button>
+  </div>
+</div>
+
+<!-- ROUTINE -->
+<div id="panel-routine" class="panel">
+  <div class="section-label">Weekly Rhythm</div>
+  <div class="card-full" style="margin-bottom:20px;"><div class="checklist" id="routineChecklist"></div></div>
+  <div class="section-label">Quarterly Deep Work</div>
+  <div class="card-full" style="margin-bottom:20px;"><div class="checklist" id="quarterlyChecklist"></div></div>
+  <div class="section-label">This Week's Focus</div>
+  <div class="narrative-box"><textarea rows="4" id="routineFocusText" placeholder="What's the one macro question you want to answer this week?"></textarea></div>
+</div>
+
+<!-- LEARNING -->
+<div id="panel-learning" class="panel">
+  <div id="learningNewForm" style="display:none;">
+    <div class="new-entry-form">
+      <div class="form-row">
+        <div class="form-field"><span class="form-label">Title</span><input type="text" id="learnTitle" class="form-input" placeholder="e.g. How the yield curve predicts recessions"></div>
+        <div class="form-field"><span class="form-label">Source</span><input type="text" id="learnSource" class="form-input" placeholder="e.g. The Economist, VoxEU"></div>
+      </div>
+      <div class="form-field" style="margin-bottom:12px;"><span class="form-label">Topic Tags</span><div class="tags-select"><button class="tag-toggle rates" onclick="toggleLearnTag(this,'rates')">Rates</button><button class="tag-toggle fx" onclick="toggleLearnTag(this,'fx')">FX</button><button class="tag-toggle inflation" onclick="toggleLearnTag(this,'inflation')">Inflation</button><button class="tag-toggle geo" onclick="toggleLearnTag(this,'geo')">Geopolitics</button><button class="tag-toggle fiscal" onclick="toggleLearnTag(this,'fiscal')">Fiscal</button></div></div>
+      <div class="form-field" style="margin-bottom:12px;"><span class="form-label">Key concept / what I learned</span><textarea id="learnConcept" class="form-input form-textarea" placeholder="The core idea in your own words..."></textarea></div>
+      <div class="form-field" style="margin-bottom:12px;"><span class="form-label">How it connects to other things I know</span><textarea id="learnConnect" class="form-input form-textarea" placeholder="This relates to X because..."></textarea></div>
+      <div class="form-field" style="margin-bottom:12px;"><span class="form-label">Questions this raised</span><textarea id="learnQuestions" class="form-input" style="min-height:60px;" placeholder="I still don't understand..."></textarea></div>
+      <div class="btn-row"><button class="btn btn-ghost" onclick="toggleNewLearn()">Cancel</button><button class="btn btn-primary" onclick="saveLearnNote()">Save Note</button></div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div class="section-label" style="margin-bottom:0;flex:1;">Learning Notes</div>
+    <button class="btn btn-primary" onclick="toggleNewLearn()" style="font-size:0.6rem;">+ New Note</button>
+  </div>
+  <div id="learnFilterRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+    <button class="tag-toggle" onclick="filterLearn(this,'all')" style="border-color:var(--accent);color:var(--accent);">All</button>
+    <button class="tag-toggle rates" onclick="filterLearn(this,'rates')">Rates</button>
+    <button class="tag-toggle fx" onclick="filterLearn(this,'fx')">FX</button>
+    <button class="tag-toggle inflation" onclick="filterLearn(this,'inflation')">Inflation</button>
+    <button class="tag-toggle geo" onclick="filterLearn(this,'geo')">Geopolitics</button>
+    <button class="tag-toggle fiscal" onclick="filterLearn(this,'fiscal')">Fiscal</button>
+  </div>
+  <div class="journal-list" id="learnList"></div>
+</div>
+
+<!-- MAP — full viewport overlay -->
+<div id="panel-map" class="panel">
+  <div id="mapTopBar">
+    <button onclick="mapFilter(null)"        class="tag-toggle" id="mf-all"        style="border-color:var(--accent);color:var(--accent);">All</button>
+    <button onclick="mapFilter('inflation')" class="tag-toggle inflation" id="mf-inflation">Inflation</button>
+    <button onclick="mapFilter('rates')"     class="tag-toggle rates"     id="mf-rates">Rates</button>
+    <button onclick="mapFilter('labor')"     class="tag-toggle fiscal"    id="mf-labor">Labour</button>
+    <button onclick="mapFilter('growth')"    class="tag-toggle fx"        id="mf-growth">Growth</button>
+    <button onclick="mapFilter('financial')" class="tag-toggle geo"       id="mf-financial">Financial</button>
+    <button onclick="mapFilter('external')"  class="tag-toggle"           id="mf-external" style="border-color:var(--accent3);color:var(--accent3);">External</button>
+    <button onclick="mapFilter('policy')"    class="tag-toggle"           id="mf-policy"   style="border-color:var(--accent2);color:var(--accent2);">Policy</button>
+  </div>
+  <div id="mapWrap">
+    <svg id="mapSvg"></svg>
+    <div id="mapDetailPanel">
+      <button onclick="mapCloseDetail()" style="position:absolute;top:16px;right:16px;background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.6rem;padding:4px 10px;cursor:pointer;border-radius:4px;letter-spacing:1px;">✕ close</button>
+      <div id="mapDetailContent"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <span class="footer-text">Macro Radar · Personal</span>
+  <span class="streak" id="streakDisplay"></span>
+</div>
+
+</div><!-- .app -->
 <script>
-  // ── STORAGE HELPERS ──────────────────────────────────────────────
-  const LS = {
-    get: (k, fallback) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch(e) { return fallback; } },
-    set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
-  };
+const LS={get:(k,fb)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch(e){return fb}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+function applyTheme(m){document.body.classList.toggle('light',m==='light');const b=document.getElementById('themeBtn');if(b)b.innerHTML=m==='light'?'🫧 light':'🌙 dark'}
+function toggleTheme(){const n=document.body.classList.contains('light')?'dark':'light';LS.set('theme',n);applyTheme(n)}
+applyTheme(LS.get('theme','dark'));
+const now=new Date();
+document.getElementById('dateBadge').innerHTML=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'<br><span style="color:var(--accent)">Week '+getWeekNumber(now)+' · Q'+(Math.ceil((now.getMonth()+1)/3))+' '+now.getFullYear()+'</span>';
+function getWeekNumber(d){d=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7)}
+document.getElementById('entryDate').value=now.toISOString().split('T')[0];
 
-  // ── THEME ────────────────────────────────────────────────────────
-  function applyTheme(mode) {
-    if (mode === 'light') {
-      document.body.classList.add('light');
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.innerHTML = '🫧 light';
-    } else {
-      document.body.classList.remove('light');
-      const btn = document.getElementById('themeBtn');
-      if (btn) btn.innerHTML = '🌙 dark';
-    }
-  }
-  function toggleTheme() {
-    const isLight = document.body.classList.contains('light');
-    const next = isLight ? 'dark' : 'light';
-    LS.set('theme', next);
-    applyTheme(next);
-  }
-  // Restore saved theme on load
-  applyTheme(LS.get('theme', 'dark'));
+// ── TABS ──────────────────────────────────────────────────────────
+const ALL_TABS=['dashboard','chain','journal','hypothesis','routine','learning','map'];
+let mapReady=false;
+function switchTab(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  LS.set('activeTab',name);
+  if(name==='map'&&!mapReady)setTimeout(initMap,80);
+}
+const savedTab=LS.get('activeTab','dashboard');
+if(savedTab&&savedTab!=='dashboard'){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const p=document.getElementById('panel-'+savedTab);if(p)p.classList.add('active');
+  const i=ALL_TABS.indexOf(savedTab);const tb=document.querySelectorAll('.tab');
+  if(i>=0&&tb[i])tb[i].classList.add('active');
+  if(savedTab==='map')setTimeout(initMap,80);
+}
 
-  // ── DATE ─────────────────────────────────────────────────────────
-  const now = new Date();
-  document.getElementById('dateBadge').innerHTML =
-    now.toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'}) + '<br>' +
-    '<span style="color:var(--accent)">Week ' + getWeekNumber(now) + ' · Q' + (Math.ceil((now.getMonth()+1)/3)) + ' ' + now.getFullYear() + '</span>';
+// ── REGIME ────────────────────────────────────────────────────────
+const regimeFields=['growthCycle','inflationRegime','cbStance','riskAppetite','dollarTrend','geoStress'];
+const savedRegime=LS.get('regime',{});
+regimeFields.forEach(id=>{const el=document.getElementById(id);if(el&&savedRegime[id])el.value=savedRegime[id];if(el)el.addEventListener('change',saveRegime)});
+const rsEl=document.getElementById('regimeSummary');
+if(rsEl){rsEl.value=LS.get('regimeSummary','');rsEl.addEventListener('input',()=>LS.set('regimeSummary',rsEl.value))}
+function saveRegime(){const r={};regimeFields.forEach(id=>{const el=document.getElementById(id);if(el)r[id]=el.value});LS.set('regime',r)}
 
-  function getWeekNumber(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-  }
+// ── INDICATORS ────────────────────────────────────────────────────
+const defInd=[{name:'2yr Treasury',val:'4.82%',signal:'bearish'},{name:'10yr Treasury',val:'4.31%',signal:'watch'},{name:'2s10s Spread',val:'-51bps',signal:'bearish'},{name:'DXY',val:'104.2',signal:'bullish'},{name:'Fed Funds Rate',val:'5.25%',signal:'neutral'},{name:'Core PCE',val:'2.8%',signal:'watch'},{name:'WTI Oil',val:'–',signal:'neutral'},{name:'Gold',val:'–',signal:'neutral'}];
+let indicators=LS.get('indicators',defInd);
+const sigCycle=['neutral','bullish','bearish','watch'];
+function renderIndicators(){document.getElementById('indicatorsList').innerHTML=indicators.map((ind,i)=>`<div class="indicator-row"><span class="indicator-name">${ind.name}</span><div class="indicator-controls"><input class="indicator-val" value="${ind.val}" onchange="indicators[${i}].val=this.value;LS.set('indicators',indicators)"><div class="signal-dot signal-${ind.signal}" onclick="cycleSignal(${i})"></div></div></div>`).join('')}
+function cycleSignal(i){indicators[i].signal=sigCycle[(sigCycle.indexOf(indicators[i].signal)+1)%sigCycle.length];LS.set('indicators',indicators);renderIndicators()}
+renderIndicators();
 
-  document.getElementById('entryDate').value = now.toISOString().split('T')[0];
+// ── IMPLICATIONS ──────────────────────────────────────────────────
+const defImp=[{text:'Duration assets remain under pressure',icon:'↓'},{text:'USD likely to stay bid vs. EM currencies',icon:'↑'},{text:'Credit spreads: watch for widening',icon:'⚠'},{text:'Commodities mixed: gold bid, oil capped',icon:'→'}];
+let implications=LS.get('implications',defImp);
+function renderImplications(){document.getElementById('implicationsList').innerHTML=implications.map((imp,i)=>`<div class="chain-node"><span class="chain-arrow">${imp.icon}</span><input class="chain-text" value="${imp.text}" placeholder="Implication..." onchange="implications[${i}].text=this.value;LS.set('implications',implications)"></div>`).join('')}
+renderImplications();
 
-  // ── TAB SWITCHING ────────────────────────────────────────────────
-  function switchTab(name) {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('panel-' + name).classList.add('active');
-    event.target.classList.add('active');
-    LS.set('activeTab', name);
-  }
+// ── CHAIN ─────────────────────────────────────────────────────────
+const chainTpl=[{label:'Trigger',placeholder:'e.g. Fed signals rate cut earlier than expected',value:''},{label:'Rates',placeholder:'Short-end yields fall, curve steepens',value:''},{label:'Dollar',placeholder:'USD weakens as rate differential narrows',value:''},{label:'EM',placeholder:'EM currencies rally',value:''},{label:'Commodities',placeholder:'Dollar weakness lifts commodity prices',value:''},{label:'Inflation',placeholder:'Import prices rise',value:''},{label:'Outcome',placeholder:'Fed faces dilemma',value:''}];
+let chainData=LS.get('chainData',chainTpl);
+function renderChain(){document.getElementById('chainNodes').innerHTML=chainData.map((n,i)=>`<div class="chain-node"><span class="chain-num">${String(i+1).padStart(2,'0')}</span><div class="chain-content"><div class="chain-label">${n.label}</div><input class="chain-text" value="${n.value||''}" placeholder="${n.placeholder}" onchange="chainData[${i}].value=this.value;LS.set('chainData',chainData)"></div>${i<chainData.length-1?'<span class="chain-arrow">↓</span>':'<span class="chain-arrow">★</span>'}</div>`).join('')}
+function addChainNode(){chainData.push({label:'Step '+(chainData.length+1),placeholder:'What happens next?',value:''});LS.set('chainData',chainData);renderChain()}
+function clearChain(){chainData=[{label:'Trigger',placeholder:'Start with an event...',value:''}];LS.set('chainData',chainData);renderChain()}
+function loadTemplate(){chainData=chainTpl.map(t=>({...t,value:''}));LS.set('chainData',chainData);renderChain()}
+renderChain();
+document.querySelectorAll('.connection-note').forEach((el,i)=>{el.value=LS.get('conn'+i,'');el.addEventListener('input',()=>LS.set('conn'+i,el.value))});
 
-  // Restore last tab
-  const savedTab = LS.get('activeTab', 'dashboard');
-  if (savedTab !== 'dashboard') {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('panel-' + savedTab).classList.add('active');
-    const tabs = ['dashboard','chain','journal','hypothesis','routine','learning'];
-    const tabIdx = tabs.indexOf(savedTab);
-    if (tabIdx >= 0) document.querySelectorAll('.tab')[tabIdx].classList.add('active');
-  }
+// ── JOURNAL ───────────────────────────────────────────────────────
+const defEntries=[{date:'2025-11-15',title:'Fed holds rates at Nov FOMC, 2 cuts projected for 2026',tags:['rates','inflation'],what:'FOMC voted unanimously to hold. Powell emphasized services inflation remains sticky.',chain:'Hold → short-end yields stay elevated → yield curve stays inverted → dollar bid',prior:'Expected more dovish tone.'}];
+let journalEntries=LS.get('journalEntries',defEntries);
+let activeTags=[];
+function toggleTag(btn,tag){btn.classList.toggle('active');activeTags=activeTags.includes(tag)?activeTags.filter(t=>t!==tag):[...activeTags,tag]}
+function toggleNewEntry(){const f=document.getElementById('journalNewForm');f.style.display=f.style.display==='none'?'block':'none'}
+function saveEntry(){const t=document.getElementById('entryTitle').value;if(!t)return;journalEntries.unshift({date:document.getElementById('entryDate').value,title:t,tags:[...activeTags],what:document.getElementById('entryWhat').value,chain:document.getElementById('entryChain').value,prior:document.getElementById('entryPrior').value});LS.set('journalEntries',journalEntries);activeTags=[];document.querySelectorAll('#panel-journal .tag-toggle').forEach(t=>t.classList.remove('active'));['entryTitle','entryWhat','entryChain','entryPrior'].forEach(id=>document.getElementById(id).value='');toggleNewEntry();renderJournal()}
+function deleteEntry(i){journalEntries.splice(i,1);LS.set('journalEntries',journalEntries);renderJournal()}
+function renderJournal(){document.getElementById('journalList').innerHTML=journalEntries.length?journalEntries.map((e,i)=>`<div class="journal-entry"><div class="journal-entry-header"><span class="journal-entry-date">${e.date}</span><div style="display:flex;align-items:center;gap:8px;"><div class="journal-entry-tags">${e.tags.map(t=>`<span class="tag ${t}">${t}</span>`).join('')}</div><button onclick="deleteEntry(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;">✕</button></div></div><div class="journal-entry-title">${e.title}</div><div class="journal-entry-preview">${e.what?e.what.substring(0,120)+(e.what.length>120?'...':''):''}</div>${e.chain?`<div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--accent2);">→ ${e.chain.substring(0,100)}</div>`:''}</div>`).join(''):'<div style="color:var(--muted);font-size:0.85rem;padding:20px 0;">No entries yet.</div>'}
+renderJournal();
 
-  // ── REGIME DASHBOARD ─────────────────────────────────────────────
-  const regimeFields = ['growthCycle','inflationRegime','cbStance','riskAppetite','dollarTrend','geoStress'];
-  const savedRegime = LS.get('regime', {});
-  regimeFields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el && savedRegime[id]) el.value = savedRegime[id];
-    el && el.addEventListener('change', saveRegime);
-  });
-  const regimeSummaryEl = document.getElementById('regimeSummary');
-  if (regimeSummaryEl) {
-    regimeSummaryEl.value = LS.get('regimeSummary', '');
-    regimeSummaryEl.addEventListener('input', () => LS.set('regimeSummary', regimeSummaryEl.value));
-  }
-  function saveRegime() {
-    const r = {};
-    regimeFields.forEach(id => { const el = document.getElementById(id); if(el) r[id] = el.value; });
-    LS.set('regime', r);
-  }
+// ── HYPOTHESES ────────────────────────────────────────────────────
+const defHyp=[{text:'If the Fed cuts before Core PCE reaches 2%, the long end will sell off.',status:'open',date:'2025-10-01'},{text:'USD/CNY will test 7.5 as US-China trade tensions escalate.',status:'open',date:'2025-09-15'}];
+let hypotheses=LS.get('hypotheses',defHyp);
+const statCycle=['open','confirmed','rejected'];
+function cycleStatus(i){hypotheses[i].status=statCycle[(statCycle.indexOf(hypotheses[i].status)+1)%statCycle.length];LS.set('hypotheses',hypotheses);renderHypotheses()}
+function deleteHypothesis(i){hypotheses.splice(i,1);LS.set('hypotheses',hypotheses);renderHypotheses()}
+function addHypothesis(){const v=document.getElementById('newHypothesis').value.trim();if(!v)return;hypotheses.unshift({text:v,status:'open',date:now.toISOString().split('T')[0]});LS.set('hypotheses',hypotheses);document.getElementById('newHypothesis').value='';renderHypotheses()}
+document.getElementById('newHypothesis').addEventListener('keydown',e=>{if(e.key==='Enter')addHypothesis()});
+function renderHypotheses(){document.getElementById('hypothesisList').innerHTML=hypotheses.map((h,i)=>`<div class="hypothesis-item ${h.status}"><div class="hypothesis-header"><div class="hypothesis-text">${h.text}</div><div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:12px;"><button class="hypothesis-status status-${h.status}" onclick="cycleStatus(${i})">${h.status}</button><button onclick="deleteHypothesis(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;">✕</button></div></div><div class="hypothesis-meta">Added ${h.date}</div></div>`).join('')}
+renderHypotheses();
 
-  // ── INDICATORS ───────────────────────────────────────────────────
-  const defaultIndicators = [
-    { name: '2yr Treasury', val: '4.82%', signal: 'bearish' },
-    { name: '10yr Treasury', val: '4.31%', signal: 'watch' },
-    { name: '2s10s Spread', val: '-51bps', signal: 'bearish' },
-    { name: 'DXY', val: '104.2', signal: 'bullish' },
-    { name: 'Fed Funds Rate', val: '5.25%', signal: 'neutral' },
-    { name: 'Core PCE', val: '2.8%', signal: 'watch' },
-    { name: 'WTI Oil', val: '–', signal: 'neutral' },
-    { name: 'Gold', val: '–', signal: 'neutral' },
-  ];
-  let indicators = LS.get('indicators', defaultIndicators);
-  const signalCycle = ['neutral','bullish','bearish','watch'];
+// ── ROUTINE ───────────────────────────────────────────────────────
+const weekly=[{text:'Check 2yr / 10yr yields & spread',freq:'Mon'},{text:'Read one central bank speech',freq:'Tue'},{text:'Scan FRED for new data releases',freq:'Wed'},{text:'Read one VoxEU or PIIE piece',freq:'Thu'},{text:'Write weekly regime summary',freq:'Fri'},{text:'Update hypotheses — new evidence?',freq:'Fri'},{text:'Log one journal entry on major event',freq:'Fri'},{text:'Check CME FedWatch for rate shifts',freq:'Weekly'}];
+const quarterly=[{text:'Read IMF World Economic Outlook',freq:'Q1/Q3'},{text:'Read BIS Quarterly Review',freq:'Quarterly'},{text:'Write full macro regime document',freq:'Quarterly'},{text:'Review all hypotheses — score yourself',freq:'Quarterly'},{text:'Pick one macro puzzle, find 2-3 papers',freq:'Quarterly'},{text:'Listen to 2-3 Odd Lots / Macro Hive',freq:'Quarterly'}];
+const thisMonday=(()=>{const d=new Date(now);d.setDate(d.getDate()-((d.getDay()+6)%7));return d.toDateString()})();
+if(LS.get('lastWeekReset','')!==thisMonday){LS.set('weeklyDone',[]);LS.set('lastWeekReset',thisMonday)}
+let weeklyDone=new Set(LS.get('weeklyDone',[]));
+let quarterlyDone=new Set(LS.get('quarterlyDone',[]));
+const focusEl=document.getElementById('routineFocusText');
+if(focusEl){focusEl.value=LS.get('routineFocus','');focusEl.addEventListener('input',()=>LS.set('routineFocus',focusEl.value))}
+function renderRoutine(){
+  document.getElementById('routineChecklist').innerHTML=weekly.map((it,i)=>`<div class="check-item ${weeklyDone.has(i)?'done':''}" onclick="toggleWeekly(${i})"><div class="check-box">${weeklyDone.has(i)?'✓':''}</div><span class="check-text">${it.text}</span><span class="check-freq">${it.freq}</span></div>`).join('');
+  document.getElementById('quarterlyChecklist').innerHTML=quarterly.map((it,i)=>`<div class="check-item ${quarterlyDone.has(i)?'done':''}" onclick="toggleQuarterly(${i})"><div class="check-box">${quarterlyDone.has(i)?'✓':''}</div><span class="check-text">${it.text}</span><span class="check-freq">${it.freq}</span></div>`).join('');
+  document.getElementById('streakDisplay').textContent=(weeklyDone.size+quarterlyDone.size)+' / '+(weekly.length+quarterly.length)+' tasks done';
+}
+function toggleWeekly(i){weeklyDone.has(i)?weeklyDone.delete(i):weeklyDone.add(i);LS.set('weeklyDone',[...weeklyDone]);renderRoutine()}
+function toggleQuarterly(i){quarterlyDone.has(i)?quarterlyDone.delete(i):quarterlyDone.add(i);LS.set('quarterlyDone',[...quarterlyDone]);renderRoutine()}
+renderRoutine();
 
-  function renderIndicators() {
-    document.getElementById('indicatorsList').innerHTML = indicators.map((ind, i) => `
-      <div class="indicator-row">
-        <span class="indicator-name">${ind.name}</span>
-        <div class="indicator-controls">
-          <input class="indicator-val" value="${ind.val}" onchange="indicators[${i}].val=this.value;LS.set('indicators',indicators)" title="Edit value">
-          <div class="signal-dot signal-${ind.signal}" onclick="cycleSignal(${i})" title="Click to change signal"></div>
-        </div>
-      </div>
-    `).join('');
-  }
+// ── LEARNING ──────────────────────────────────────────────────────
+let learnNotes=LS.get('learnNotes',[]);
+let activeLearnTags=[];
+let activeLearnFilter='all';
+function toggleLearnTag(btn,tag){btn.classList.toggle('active');activeLearnTags=activeLearnTags.includes(tag)?activeLearnTags.filter(t=>t!==tag):[...activeLearnTags,tag]}
+function toggleNewLearn(){const f=document.getElementById('learningNewForm');f.style.display=f.style.display==='none'?'block':'none'}
+function saveLearnNote(){const t=document.getElementById('learnTitle').value.trim();if(!t)return;learnNotes.unshift({id:Date.now(),date:now.toISOString().split('T')[0],title:t,source:document.getElementById('learnSource').value,tags:[...activeLearnTags],concept:document.getElementById('learnConcept').value,connect:document.getElementById('learnConnect').value,questions:document.getElementById('learnQuestions').value});LS.set('learnNotes',learnNotes);activeLearnTags=[];document.querySelectorAll('#learningNewForm .tag-toggle').forEach(t=>t.classList.remove('active'));['learnTitle','learnSource','learnConcept','learnConnect','learnQuestions'].forEach(id=>document.getElementById(id).value='');toggleNewLearn();renderLearnNotes()}
+function deleteLearnNote(i){learnNotes.splice(i,1);LS.set('learnNotes',learnNotes);renderLearnNotes()}
+function filterLearn(btn,tag){document.querySelectorAll('#learnFilterRow .tag-toggle').forEach(t=>{t.classList.remove('active');t.style.borderColor='';t.style.color=''});btn.classList.add('active');if(tag==='all'){btn.style.borderColor='var(--accent)';btn.style.color='var(--accent)'}activeLearnFilter=tag;renderLearnNotes()}
+function toggleLearnExpand(i){const el=document.getElementById('learn-expand-'+i);if(el)el.style.display=el.style.display==='none'?'block':'none'}
+function renderLearnNotes(){const filtered=activeLearnFilter==='all'?learnNotes:learnNotes.filter(n=>n.tags.includes(activeLearnFilter));document.getElementById('learnList').innerHTML=filtered.length?filtered.map((n,i)=>`<div class="journal-entry" onclick="toggleLearnExpand(${i})" style="cursor:pointer;"><div class="journal-entry-header"><span class="journal-entry-date">${n.date}${n.source?' · <span style="color:var(--muted)">'+n.source+'</span>':''}</span><div style="display:flex;align-items:center;gap:8px;"><div class="journal-entry-tags">${n.tags.map(t=>`<span class="tag ${t}">${t}</span>`).join('')}</div><button onclick="event.stopPropagation();deleteLearnNote(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;">✕</button></div></div><div class="journal-entry-title">${n.title}</div><div class="journal-entry-preview">${n.concept?n.concept.substring(0,130)+(n.concept.length>130?'...':''):''}</div><div id="learn-expand-${i}" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">${n.connect?`<div style="margin-bottom:10px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent2);margin-bottom:4px;">Connections</div><div style="font-size:0.8rem;color:var(--text);line-height:1.6;">${n.connect}</div></div>`:''}${n.questions?`<div><div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent3);margin-bottom:4px;">Open Questions</div><div style="font-size:0.8rem;color:var(--text);line-height:1.6;">${n.questions}</div></div>`:''}</div></div>`).join(''):'<div style="color:var(--muted);font-size:0.85rem;padding:20px 0;">No notes yet.</div>'}
+renderLearnNotes();
 
-  function cycleSignal(i) {
-    const idx = signalCycle.indexOf(indicators[i].signal);
-    indicators[i].signal = signalCycle[(idx+1) % signalCycle.length];
-    LS.set('indicators', indicators);
-    renderIndicators();
-  }
-  renderIndicators();
+// ── SNAPSHOTS ─────────────────────────────────────────────────────
+let snapshots=LS.get('snapshots',[]);
+function captureCurrentState(){const r={};regimeFields.forEach(id=>{const el=document.getElementById(id);if(el)r[id]=el.value});return{regime:r,summary:rsEl?rsEl.value:'',indicators:JSON.parse(JSON.stringify(indicators)),implications:JSON.parse(JSON.stringify(implications))}}
+function saveSnapshot(){const n=document.getElementById('snapshotName').value.trim();if(!n)return;snapshots.unshift({id:Date.now(),name:n,date:new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}),state:captureCurrentState()});LS.set('snapshots',snapshots);document.getElementById('snapshotName').value='';renderSnapshots()}
+function deleteSnapshot(i){snapshots.splice(i,1);LS.set('snapshots',snapshots);renderSnapshots()}
+function toggleSnapshotExpand(i){const el=document.getElementById('snap-expand-'+i);if(el)el.style.display=el.style.display==='none'?'block':'none'}
+function restoreSnapshot(i){const s=snapshots[i].state;Object.entries(s.regime).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v});saveRegime();if(rsEl){rsEl.value=s.summary;LS.set('regimeSummary',s.summary)}indicators.forEach((ind,j)=>{if(s.indicators[j]){ind.val=s.indicators[j].val;ind.signal=s.indicators[j].signal}});LS.set('indicators',indicators);renderIndicators();implications.forEach((imp,j)=>{if(s.implications[j])imp.text=s.implications[j].text});LS.set('implications',implications);renderImplications();renderSnapshots()}
+function renderSnapshots(){const el=document.getElementById('snapshotList');if(!el)return;el.innerHTML=snapshots.length?snapshots.map((snap,i)=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div><span style="font-family:'Playfair Display',serif;font-size:0.95rem;color:var(--text);">${snap.name}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);margin-left:10px;">${snap.date}</span></div><div style="display:flex;gap:6px;"><button onclick="toggleSnapshotExpand(${i})" class="btn btn-ghost" style="font-size:0.55rem;padding:5px 10px;">View</button><button onclick="restoreSnapshot(${i})" class="btn btn-ghost" style="font-size:0.55rem;padding:5px 10px;color:var(--accent);border-color:var(--accent);">Restore</button><button onclick="deleteSnapshot(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;padding:2px 6px;">✕</button></div></div>${snap.state.summary?`<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:8px;">"${snap.state.summary.substring(0,120)}..."</div>`:''}<div id="snap-expand-${i}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">${Object.entries(snap.state.regime).map(([k,v])=>`<div style="background:var(--surface);border-radius:5px;padding:8px 10px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">${k.replace(/([A-Z])/g,' $1').trim()}</div><div style="font-size:0.78rem;color:var(--text);">${v}</div></div>`).join('')}</div></div></div>`).join(''):'<div style="color:var(--muted);font-size:0.8rem;padding:8px 0;">No snapshots yet.</div>'}
+renderSnapshots();
 
-  // ── IMPLICATIONS ─────────────────────────────────────────────────
-  const defaultImplications = [
-    { text: 'Duration assets remain under pressure', icon: '↓' },
-    { text: 'USD likely to stay bid vs. EM currencies', icon: '↑' },
-    { text: 'Credit spreads: watch for widening', icon: '⚠' },
-    { text: 'Commodities mixed: gold bid, oil capped', icon: '→' },
-  ];
-  let implications = LS.get('implications', defaultImplications);
+// ── MAP ───────────────────────────────────────────────────────────
+const CAT_COLOR={inflation:'#d4824a',rates:'#5b9bd5',labor:'#6bbf8e',growth:'#c4a45a',financial:'#9b7ed4',external:'#d45b7a',policy:'#5bbfb8'};
+const NODES=[
+  {id:'fed_funds',cat:'policy',   label:'Fed Funds\nRate',       r:26,name:'Federal Funds Rate',        ticker:'FRED: FEDFUNDS',     what:'The overnight rate banks lend reserves to each other. Set by FOMC. Primary lever of US monetary policy.',why:'Every other rate anchors to this. Mortgages, corporate borrowing, credit cards — all move with it.',policy:'Inflation above target → raise. Unemployment rising → cut.',conns:['cpi','pce','unemployment','gdp','us2y','us10y','dxy','sp500']},
+  {id:'cpi',      cat:'inflation',label:'CPI',                   r:20,name:'Consumer Price Index',       ticker:'FRED: CPIAUCSL',     what:'Average price change for a basket of consumer goods. Headline includes food & energy; Core strips them.',why:'Most watched inflation gauge. Supercore (services ex-shelter) is current Fed focus.',policy:'CPI above 2-3% sustained → Fed considers hikes.',conns:['fed_funds','pce','ppi','wages','us10y','breakevens']},
+  {id:'pce',      cat:'inflation',label:'Core PCE',              r:19,name:'Core PCE Deflator',          ticker:'FRED: PCEPILFE',     what:"PCE ex food and energy. The Fed's officially preferred inflation measure.",why:"The Fed's 2% target is PCE. Every release scrutinised for rate path.",policy:'PCE sustainably at 2% = cuts possible. Above 2.5% = stays restrictive.',conns:['fed_funds','cpi','breakevens','wages']},
+  {id:'ppi',      cat:'inflation',label:'PPI',                   r:15,name:'Producer Price Index',       ticker:'FRED: PPIACO',       what:'Selling prices received by domestic producers. Leads CPI by 3-6 months.',why:'PPI surge warns of consumer inflation ahead.',policy:'Hot PPI → anticipate CPI acceleration.',conns:['cpi','pce','oil']},
+  {id:'breakevens',cat:'inflation',label:'Breakeven\nInflation', r:16,name:'5y5y Breakeven Inflation',  ticker:'FRED: T5YIFR',       what:"Market's expectation of average inflation over 5 years starting 5 years from now.",why:"If unanchored above 2.5%, market no longer believes Fed will hit target.",policy:'Breakevens above 2.5% rising → Fed talks tough.',conns:['cpi','pce','us10y','fed_funds','gold']},
+  {id:'us2y',     cat:'rates',    label:'2yr\nTreasury',         r:19,name:'2-Year Treasury Yield',      ticker:'FRED: DGS2',         what:"Yield on 2yr US bonds. Reflects market's Fed rate expectations over 2 years.",why:"Market's real-time forecast of Fed policy. Moves before the Fed acts.",policy:'Fed hikes expected → 2yr rises. Cuts priced → 2yr falls.',conns:['fed_funds','us10y','yield_curve','dxy']},
+  {id:'us10y',    cat:'rates',    label:'10yr\nTreasury',        r:21,name:'10-Year Treasury Yield',     ticker:'FRED: DGS10',        what:"World's most important rate benchmark. Drives mortgages, corporate bonds, equity valuations.",why:"Rising 10yr compresses P/E multiples.",policy:'Fed controls short rates but only influences 10yr. Rising 10yr tightens conditions.',conns:['fed_funds','us2y','yield_curve','breakevens','sp500','mortgages']},
+  {id:'yield_curve',cat:'rates', label:'2s10s\nSpread',          r:17,name:'Yield Curve (2s10s)',        ticker:'FRED: T10Y2Y',       what:'10yr minus 2yr yield. Inverted curve preceded every US recession since 1970.',why:'Banks borrow short, lend long. Inversion makes lending unprofitable.',policy:'Persistent inversion → eventual recession. Rapid re-steepening = recession imminent.',conns:['us2y','us10y','fed_funds','credit_spreads']},
+  {id:'mortgages',cat:'rates',   label:'30yr\nMortgage',         r:14,name:'30yr Fixed Mortgage Rate',  ticker:'FRED: MORTGAGE30US', what:'Tracks 10yr Treasury with a spread.',why:'Housing is rate-sensitive. Sharp rise → activity collapses.',policy:'Hikes → 10yr rises → mortgages rise → housing cools.',conns:['us10y','fed_funds','housing']},
+  {id:'unemployment',cat:'labor',label:'Unemployment\nRate',     r:19,name:'Unemployment Rate (U-3)',   ticker:'FRED: UNRATE',       what:"% of labour force jobless and seeking work. One half of Fed's dual mandate.",why:'Low unemployment = wage pressure = inflation risk.',policy:'Sahm Rule (0.5% rise) = recession signal, Fed cuts aggressively.',conns:['fed_funds','wages','gdp','nfp','jolts']},
+  {id:'nfp',      cat:'labor',   label:'Non-Farm\nPayrolls',     r:18,name:'Non-Farm Payrolls',         ticker:'BLS: CES',           what:'Monthly change in employed people. Most market-moving data release.',why:'Strong print = momentum. Weak = recession fears.',policy:'Above 150k = solid. Below 100k = softening. Negative = alarm.',conns:['unemployment','wages','gdp','fed_funds']},
+  {id:'wages',    cat:'labor',   label:'Avg Hourly\nEarnings',   r:16,name:'Average Hourly Earnings',   ticker:'BLS: CES0000000008', what:'YoY change in average hourly wages.',why:'Wages are the largest input cost for services (~70% of economy).',policy:'Above 4% YoY = upward pressure on services inflation.',conns:['unemployment','cpi','pce','fed_funds']},
+  {id:'jolts',    cat:'labor',   label:'JOLTS\nOpenings',        r:14,name:'JOLTS Job Openings',        ticker:'FRED: JTSJOL',       what:'Job openings survey. Leads unemployment by months.',why:"Quits rate is the Fed's favourite labour signal.",policy:'Openings/unemployed above 1.5 = very tight.',conns:['unemployment','wages','nfp']},
+  {id:'gdp',      cat:'growth',  label:'GDP\nGrowth',            r:21,name:'GDP Growth',                ticker:'FRED: A191RL1Q225SBEA',what:'Quarterly measure of all goods and services produced.',why:'Broadest health measure. Two negative = technical recession.',policy:'Strong = less urgency to cut. Negative + unemployment rising = aggressive easing.',conns:['fed_funds','unemployment','pmi','retail_sales','housing']},
+  {id:'pmi',      cat:'growth',  label:'PMI',                    r:16,name:'Purchasing Managers Index', ticker:'ISM / S&P Global',   what:'Survey: above 50 = expansion, below 50 = contraction.',why:'Leading indicator. Services PMI most important.',policy:'PMI below 50 for 3+ months = easing probability rises.',conns:['gdp','nfp','retail_sales']},
+  {id:'retail_sales',cat:'growth',label:'Retail\nSales',        r:15,name:'Retail Sales',              ticker:'FRED: RSAFS',        what:'Monthly consumer spending at retail. ~30% of total consumer spending.',why:'Consumer spending is ~70% of US GDP.',policy:'Sustained weakness → recession risk → Fed eases.',conns:['gdp','pmi','unemployment','cpi']},
+  {id:'housing',  cat:'growth',  label:'Housing\nStarts',        r:14,name:'Housing Starts & Permits',  ticker:'FRED: HOUST',        what:'Monthly new residential construction. Most rate-sensitive sector.',why:'First sector hit by rate hikes.',policy:'Sharp slowdown = rate hikes working.',conns:['mortgages','gdp','us10y']},
+  {id:'sp500',    cat:'financial',label:'S&P 500',               r:19,name:'S&P 500 Index',             ticker:'SP:SPX',             what:'Market-cap weighted index of 500 large US companies.',why:'20%+ selloff tightens financial conditions ~1-2 Fed hikes.',policy:'Sharp selloff → conditions tighten → Fed may ease.',conns:['fed_funds','us10y','credit_spreads','vix','dxy']},
+  {id:'credit_spreads',cat:'financial',label:'Credit\nSpreads', r:16,name:'IG & HY Credit Spreads',    ticker:'FRED: BAMLC0A0CM',   what:'Yield premium corporate bonds pay over Treasuries.',why:'Canary in the coal mine. Widen before recessions.',policy:'Rapidly widening → credit crunch risk → Fed eases.',conns:['yield_curve','sp500','vix','fed_funds']},
+  {id:'vix',      cat:'financial',label:'VIX',                   r:14,name:'VIX Volatility Index',      ticker:'CBOE:VIX',           what:"'Fear gauge' — implied S&P 500 volatility over 30 days.",why:'Spikes signal risk-off, capital flight to safe havens.',policy:'VIX above 30 sustained → Fed watches financial stability.',conns:['sp500','credit_spreads','dxy','gold']},
+  {id:'dxy',      cat:'external',label:'DXY\nDollar',            r:19,name:'US Dollar Index (DXY)',     ticker:'TVC:DXY',            what:'Dollar vs 6 major currencies. EUR has ~57% weight.',why:'Strong DXY tightens global financial conditions.',policy:'Fed hikes → rate differential widens → DXY strengthens.',conns:['fed_funds','us2y','gold','oil','em_stress']},
+  {id:'gold',     cat:'external',label:'Gold',                   r:15,name:'Gold (XAU/USD)',            ticker:'TVC:GOLD',           what:'Driven by real rates, USD, and safe-haven demand.',why:'Gold rises when real yields fall or stress spikes.',policy:'Fed cuts → real yields fall → gold rises.',conns:['breakevens','dxy','vix','us10y']},
+  {id:'oil',      cat:'external',label:'WTI\nOil',               r:16,name:'WTI Crude Oil',             ticker:'NYMEX:CL1!',         what:'Global oil benchmark. Driven by OPEC+, demand, geopolitics, USD.',why:'$10/barrel rise adds ~0.3-0.5% to headline CPI.',policy:'Oil spike = dilemma: hike to fight inflation vs. risk crushing growth.',conns:['cpi','ppi','dxy','breakevens']},
+  {id:'em_stress',cat:'external',label:'EM\nStress',             r:13,name:'Emerging Market Stress',   ticker:'FRED: BAMLEMCBPIOAS',what:'Spreads on EM sovereign and corporate bonds.',why:'Strong dollar + Fed hikes historically cause EM crises.',policy:'Severe EM stress can cause Fed to slow hiking.',conns:['dxy','fed_funds','vix']},
+];
+const LINKS=[];
+const _seen=new Set();
+NODES.forEach(n=>n.conns.forEach(t=>{const k=[n.id,t].sort().join('--');if(!_seen.has(k)){_seen.add(k);LINKS.push({source:n.id,target:t})}}));
 
-  function renderImplications() {
-    document.getElementById('implicationsList').innerHTML = implications.map((imp, i) => `
-      <div class="chain-node">
-        <span class="chain-arrow">${imp.icon}</span>
-        <input class="chain-text" value="${imp.text}" placeholder="Implication..."
-          onchange="implications[${i}].text=this.value;LS.set('implications',implications)">
-      </div>
-    `).join('');
-  }
-  renderImplications();
+let mapSvgG=null,mapSim=null,mapActiveFilter=null;
+let mapLinkSel=null,mapNodeSel=null;
 
-  // ── CHAIN BUILDER ────────────────────────────────────────────────
-  const chainTemplates = [
-    { label: 'Trigger',     placeholder: 'e.g. Fed signals rate cut earlier than expected', value: '' },
-    { label: 'Rates',       placeholder: 'Short-end yields fall, curve steepens', value: '' },
-    { label: 'Dollar',      placeholder: 'USD weakens as rate differential narrows', value: '' },
-    { label: 'EM',          placeholder: 'EM currencies rally, capital flows to EM assets', value: '' },
-    { label: 'Commodities', placeholder: 'Dollar weakness lifts commodity prices (gold, oil)', value: '' },
-    { label: 'Inflation',   placeholder: 'Import prices rise, inflation expectations tick up', value: '' },
-    { label: 'Outcome',     placeholder: 'Fed faces dilemma: cut causes inflation to re-accelerate', value: '' },
-  ];
-  let chainData = LS.get('chainData', chainTemplates);
+function mapCloseDetail(){
+  document.getElementById('mapDetailPanel').classList.remove('open');
+  if(!mapSvgG)return;
+  mapSvgG.selectAll('.mnode circle').attr('opacity',1).attr('stroke-width',1.5).attr('stroke',d=>CAT_COLOR[d.cat]+'88');
+  mapSvgG.selectAll('.mnode text').attr('opacity',1);
+  mapSvgG.selectAll('.mlink').attr('opacity',0.18).attr('stroke-width',1);
+}
+function mapFilter(cat){
+  mapActiveFilter=cat;
+  // update button states
+  document.querySelectorAll('#mapTopBar button').forEach(b=>b.classList.remove('active'));
+  const activeBtn=cat?document.getElementById('mf-'+cat):document.getElementById('mf-all');
+  if(activeBtn)activeBtn.classList.add('active');
+  if(!mapSvgG)return;
+  mapSvgG.selectAll('.mnode').attr('opacity',d=>!cat||d.cat===cat?1:0.07);
+  mapSvgG.selectAll('.mlink').attr('opacity',d=>!cat||d.source.cat===cat||d.target.cat===cat?0.3:0.02);
+}
+function mapJump(id){const n=NODES.find(x=>x.id===id);if(n)mapSelect(n)}
+function mapSelect(n){
+  const conn=new Set(n.conns);
+  mapSvgG.selectAll('.mnode circle').attr('opacity',d=>d.id===n.id||conn.has(d.id)?1:0.08).attr('stroke-width',d=>d.id===n.id?2.5:1.5).attr('stroke',d=>d.id===n.id?CAT_COLOR[d.cat]:CAT_COLOR[d.cat]+'55');
+  mapSvgG.selectAll('.mnode text').attr('opacity',d=>d.id===n.id||conn.has(d.id)?1:0.08);
+  mapSvgG.selectAll('.mlink').attr('opacity',d=>d.source.id===n.id||d.target.id===n.id?0.85:0.02).attr('stroke-width',d=>d.source.id===n.id||d.target.id===n.id?2:1);
 
-  function renderChain() {
-    document.getElementById('chainNodes').innerHTML = chainData.map((node, i) => `
-      <div class="chain-node">
-        <span class="chain-num">${String(i+1).padStart(2,'0')}</span>
-        <div class="chain-content">
-          <div class="chain-label">${node.label}</div>
-          <input class="chain-text" value="${node.value||''}" placeholder="${node.placeholder}"
-            onchange="chainData[${i}].value=this.value;LS.set('chainData',chainData)">
-        </div>
-        ${i < chainData.length-1 ? '<span class="chain-arrow">↓</span>' : '<span class="chain-arrow">★</span>'}
-      </div>
-    `).join('');
-  }
+  // Click float effect
+  n.vx=(Math.random()-0.5)*10; n.vy=(Math.random()-0.5)*10;
+  NODES.forEach(nd=>{if(conn.has(nd.id)){nd.vx=(Math.random()-0.5)*5;nd.vy=(Math.random()-0.5)*5}});
+  if(mapSim)mapSim.alpha(0.2).restart();
 
-  function addChainNode() {
-    chainData.push({ label: 'Step ' + (chainData.length+1), placeholder: 'What happens next?', value: '' });
-    LS.set('chainData', chainData);
-    renderChain();
-  }
+  const connHTML=n.conns.map(id=>{const t=NODES.find(x=>x.id===id);return t?`<div onclick="mapJump('${id}')" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#0e1118;border-radius:4px;border:1px solid #1c2030;font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:#7a7f8e;cursor:pointer;margin-bottom:4px;" onmouseover="this.style.borderColor='${CAT_COLOR[t.cat]}'" onmouseout="this.style.borderColor='#1c2030'"><span style="color:${CAT_COLOR[t.cat]}">●</span><span style="color:#9a9690;">→</span><span style="color:#c8c4bc;">${t.name}</span></div>`:''}).join('');
+  document.getElementById('mapDetailContent').innerHTML=`
+    <div style="font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:${CAT_COLOR[n.cat]};margin-bottom:8px;">${n.cat.toUpperCase()}</div>
+    <div style="font-family:'Playfair Display',serif;font-size:1.4rem;line-height:1.2;margin-bottom:6px;color:#e8e4da;">${n.name}</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:#606878;letter-spacing:1.5px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1c2030;">${n.ticker}</div>
+    <div style="margin-bottom:14px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:#606878;margin-bottom:5px;">What it measures</div><div style="font-size:0.82rem;font-weight:300;line-height:1.7;color:#c8c4bc;">${n.what}</div></div>
+    <div style="margin-bottom:14px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:#606878;margin-bottom:5px;">Why it matters</div><div style="font-size:0.82rem;font-weight:300;line-height:1.7;color:#c8c4bc;">${n.why}</div></div>
+    <div style="margin-bottom:14px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:#606878;margin-bottom:5px;">Policy reaction</div><div style="background:#0e1118;border:1px solid #252a38;border-radius:6px;padding:10px 12px;font-size:0.82rem;font-weight:300;line-height:1.6;color:#c8c4bc;">${n.policy}</div></div>
+    <div><div style="font-family:'IBM Plex Mono',monospace;font-size:0.55rem;letter-spacing:2px;text-transform:uppercase;color:#606878;margin-bottom:8px;">Connected (${n.conns.length})</div>${connHTML}</div>`;
+  document.getElementById('mapDetailPanel').classList.add('open');
+}
 
-  function clearChain() {
-    chainData = [{ label: 'Trigger', placeholder: 'Start with an event or policy change...', value: '' }];
-    LS.set('chainData', chainData);
-    renderChain();
-  }
+function initMap(){
+  if(mapReady)return;
+  mapReady=true;
 
-  function loadTemplate() {
-    chainData = chainTemplates.map(t => ({...t, value: ''}));
-    LS.set('chainData', chainData);
-    renderChain();
-  }
-  renderChain();
+  const wrap=document.getElementById('mapWrap');
+  const W=wrap.offsetWidth;
+  const H=wrap.offsetHeight;
 
-  // ── CROSS-ASSET CONNECTION NOTES ─────────────────────────────────
-  const connKeys = ['conn0','conn1','conn2','conn3','conn4','conn5'];
-  document.querySelectorAll('.connection-note').forEach((el, i) => {
-    el.value = LS.get(connKeys[i], '');
-    el.addEventListener('input', () => LS.set(connKeys[i], el.value));
-  });
+  const svg=d3.select('#mapSvg').attr('width',W).attr('height',H);
+  const g=svg.append('g');
+  mapSvgG=g;
 
-  // ── JOURNAL ──────────────────────────────────────────────────────
-  const defaultEntries = [
-    {
-      date: '2025-11-15',
-      title: 'Fed holds rates at Nov FOMC, 2 cuts projected for 2026',
-      tags: ['rates','inflation'],
-      what: 'FOMC voted unanimously to hold. Dot plot revised to show 2 cuts in 2026 vs 3 previously. Powell emphasized services inflation remains sticky.',
-      chain: 'Hold → short-end yields stay elevated → yield curve stays inverted → dollar stays bid → EM under pressure',
-      prior: 'Expected more dovish tone. Market had priced 3 cuts — repricing caused front-end selloff.'
-    }
-  ];
-  let journalEntries = LS.get('journalEntries', defaultEntries);
-  let activeTags = [];
+  svg.call(d3.zoom().scaleExtent([0.3,3]).on('zoom',e=>g.attr('transform',e.transform)));
+  svg.on('click',()=>mapCloseDetail());
 
-  function toggleTag(btn, tag) {
-    btn.classList.toggle('active');
-    activeTags = activeTags.includes(tag) ? activeTags.filter(t => t !== tag) : [...activeTags, tag];
-  }
+  mapSim=d3.forceSimulation(NODES)
+    .force('link',d3.forceLink(LINKS).id(d=>d.id).distance(d=>d.source.id==='fed_funds'||d.target.id==='fed_funds'?160:100).strength(0.3))
+    .force('charge',d3.forceManyBody().strength(-280))
+    .force('center',d3.forceCenter(W/2,H/2))
+    .force('collision',d3.forceCollide(d=>d.r+16))
+    .alphaDecay(0.015)
+    .velocityDecay(0.25);
 
-  function toggleNewEntry() {
-    const form = document.getElementById('journalNewForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-  }
+  mapLinkSel=g.append('g').selectAll('line').data(LINKS).join('line')
+    .attr('class','mlink')
+    .attr('stroke',d=>{const s=typeof d.source==='object'?d.source:NODES.find(n=>n.id===d.source);return CAT_COLOR[s.cat]})
+    .attr('stroke-opacity',0.18).attr('stroke-width',1);
 
-  function saveEntry() {
-    const title = document.getElementById('entryTitle').value;
-    if (!title) return;
-    journalEntries.unshift({
-      date: document.getElementById('entryDate').value,
-      title,
-      tags: [...activeTags],
-      what: document.getElementById('entryWhat').value,
-      chain: document.getElementById('entryChain').value,
-      prior: document.getElementById('entryPrior').value,
+  mapNodeSel=g.append('g').selectAll('g').data(NODES).join('g')
+    .attr('class','mnode').style('cursor','pointer')
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)mapSim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y})
+      .on('end',(e,d)=>{if(!e.active)mapSim.alphaTarget(0);d.fx=null;d.fy=null}))
+    .on('click',(e,d)=>{e.stopPropagation();mapSelect(d)});
+
+  mapNodeSel.append('circle')
+    .attr('r',d=>d.r)
+    .attr('fill',d=>CAT_COLOR[d.cat]+'22')
+    .attr('stroke',d=>CAT_COLOR[d.cat]+'88')
+    .attr('stroke-width',1.5);
+
+  mapNodeSel.each(function(d){
+    const el=d3.select(this);
+    const lines=d.label.split('\n');
+    const lh=10;
+    const y0=-(lines.length-1)*lh/2;
+    lines.forEach((line,i)=>{
+      el.append('text').text(line.toUpperCase())
+        .attr('y',y0+i*lh)
+        .attr('text-anchor','middle').attr('dominant-baseline','middle')
+        .attr('font-family',"'IBM Plex Mono',monospace")
+        .attr('font-size','8px').attr('letter-spacing','0.8px')
+        .attr('fill','#7a7f8e').style('pointer-events','none');
     });
-    LS.set('journalEntries', journalEntries);
-    activeTags = [];
-    document.querySelectorAll('.tag-toggle').forEach(t => t.classList.remove('active'));
-    ['entryTitle','entryWhat','entryChain','entryPrior'].forEach(id => document.getElementById(id).value = '');
-    toggleNewEntry();
-    renderJournal();
-  }
-
-  function deleteEntry(i) {
-    journalEntries.splice(i, 1);
-    LS.set('journalEntries', journalEntries);
-    renderJournal();
-  }
-
-  function renderJournal() {
-    document.getElementById('journalList').innerHTML = journalEntries.length ? journalEntries.map((e, i) => `
-      <div class="journal-entry">
-        <div class="journal-entry-header">
-          <span class="journal-entry-date">${e.date}</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="journal-entry-tags">${e.tags.map(t => `<span class="tag ${t}">${t}</span>`).join('')}</div>
-            <button onclick="deleteEntry(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;padding:2px 5px;" title="Delete">✕</button>
-          </div>
-        </div>
-        <div class="journal-entry-title">${e.title}</div>
-        <div class="journal-entry-preview">${e.what ? e.what.substring(0,120) + (e.what.length > 120 ? '...' : '') : ''}</div>
-        ${e.chain ? `<div style="margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--accent2);">→ ${e.chain.substring(0,100)}</div>` : ''}
-      </div>
-    `).join('') : '<div style="color:var(--muted);font-size:0.85rem;padding:20px 0;">No entries yet. Hit + New Entry to start your macro journal.</div>';
-  }
-  renderJournal();
-
-  // ── HYPOTHESES ───────────────────────────────────────────────────
-  const defaultHypotheses = [
-    { text: 'If the Fed cuts before Core PCE reaches 2%, the long end will sell off as term premium rises, causing a bear steepener.', status: 'open', date: '2025-10-01' },
-    { text: 'USD/CNY will test 7.5 in H1 2025 as US-China trade tensions escalate under new tariff regime.', status: 'open', date: '2025-09-15' },
-    { text: 'A European recession in late 2024 would have caused EUR/USD to break below 1.05.', status: 'rejected', date: '2025-03-01' },
-  ];
-  let hypotheses = LS.get('hypotheses', defaultHypotheses);
-  const statusCycle = ['open','confirmed','rejected'];
-
-  function cycleStatus(i) {
-    const idx = statusCycle.indexOf(hypotheses[i].status);
-    hypotheses[i].status = statusCycle[(idx+1) % statusCycle.length];
-    LS.set('hypotheses', hypotheses);
-    renderHypotheses();
-  }
-
-  function deleteHypothesis(i) {
-    hypotheses.splice(i, 1);
-    LS.set('hypotheses', hypotheses);
-    renderHypotheses();
-  }
-
-  function addHypothesis() {
-    const val = document.getElementById('newHypothesis').value.trim();
-    if (!val) return;
-    hypotheses.unshift({ text: val, status: 'open', date: now.toISOString().split('T')[0] });
-    LS.set('hypotheses', hypotheses);
-    document.getElementById('newHypothesis').value = '';
-    renderHypotheses();
-  }
-
-  document.getElementById('newHypothesis').addEventListener('keydown', e => { if(e.key==='Enter') addHypothesis(); });
-
-  function renderHypotheses() {
-    document.getElementById('hypothesisList').innerHTML = hypotheses.map((h, i) => `
-      <div class="hypothesis-item ${h.status}">
-        <div class="hypothesis-header">
-          <div class="hypothesis-text">${h.text}</div>
-          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:12px;">
-            <button class="hypothesis-status status-${h.status}" onclick="cycleStatus(${i})">${h.status}</button>
-            <button onclick="deleteHypothesis(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;" title="Delete">✕</button>
-          </div>
-        </div>
-        <div class="hypothesis-meta">Added ${h.date} · Click status to cycle: open → confirmed → rejected</div>
-      </div>
-    `).join('');
-  }
-  renderHypotheses();
-
-  // ── ROUTINE ──────────────────────────────────────────────────────
-  const weekly = [
-    { text: 'Check 2yr / 10yr yields & spread', freq: 'Mon' },
-    { text: 'Read one central bank speech or statement', freq: 'Tue' },
-    { text: 'Scan FRED for any new data releases', freq: 'Wed' },
-    { text: 'Read one VoxEU or PIIE piece', freq: 'Thu' },
-    { text: 'Write weekly regime summary (1 paragraph)', freq: 'Fri' },
-    { text: 'Update hypotheses — any new evidence?', freq: 'Fri' },
-    { text: 'Log one journal entry on major event of the week', freq: 'Fri' },
-    { text: 'Check CME FedWatch for rate expectations shift', freq: 'Weekly' },
-  ];
-  const quarterly = [
-    { text: 'Read IMF World Economic Outlook update', freq: 'Q1 / Q3' },
-    { text: 'Read BIS Quarterly Review', freq: 'Quarterly' },
-    { text: 'Write full macro regime document (1 page)', freq: 'Quarterly' },
-    { text: 'Review all hypotheses — score yourself', freq: 'Quarterly' },
-    { text: 'Pick one macro puzzle — find 2–3 papers on it', freq: 'Quarterly' },
-    { text: 'Listen to 2–3 Odd Lots / Macro Hive podcasts', freq: 'Quarterly' },
-  ];
-
-  // Reset weekly checklist every Monday
-  const lastWeekReset = LS.get('lastWeekReset', '');
-  const thisMonday = (() => { const d = new Date(now); d.setDate(d.getDate() - ((d.getDay()+6)%7)); return d.toDateString(); })();
-  if (lastWeekReset !== thisMonday) { LS.set('weeklyDone', []); LS.set('lastWeekReset', thisMonday); }
-
-  let weeklyDone = new Set(LS.get('weeklyDone', []));
-  let quarterlyDone = new Set(LS.get('quarterlyDone', []));
-
-  // Restore routine focus textarea
-  const focusEl = document.querySelector('#panel-routine .narrative-box textarea');
-  if (focusEl) {
-    focusEl.value = LS.get('routineFocus', '');
-    focusEl.addEventListener('input', () => LS.set('routineFocus', focusEl.value));
-  }
-
-  function renderRoutine() {
-    document.getElementById('routineChecklist').innerHTML = weekly.map((item, i) => `
-      <div class="check-item ${weeklyDone.has(i) ? 'done' : ''}" onclick="toggleWeekly(${i})">
-        <div class="check-box">${weeklyDone.has(i) ? '✓' : ''}</div>
-        <span class="check-text">${item.text}</span>
-        <span class="check-freq">${item.freq}</span>
-      </div>
-    `).join('');
-
-    document.getElementById('quarterlyChecklist').innerHTML = quarterly.map((item, i) => `
-      <div class="check-item ${quarterlyDone.has(i) ? 'done' : ''}" onclick="toggleQuarterly(${i})">
-        <div class="check-box">${quarterlyDone.has(i) ? '✓' : ''}</div>
-        <span class="check-text">${item.text}</span>
-        <span class="check-freq">${item.freq}</span>
-      </div>
-    `).join('');
-
-    const done = weeklyDone.size + quarterlyDone.size;
-    const total = weekly.length + quarterly.length;
-    document.getElementById('streakDisplay').textContent = done + ' / ' + total + ' tasks done this period';
-  }
-
-  function toggleWeekly(i) {
-    weeklyDone.has(i) ? weeklyDone.delete(i) : weeklyDone.add(i);
-    LS.set('weeklyDone', [...weeklyDone]);
-    renderRoutine();
-  }
-  function toggleQuarterly(i) {
-    quarterlyDone.has(i) ? quarterlyDone.delete(i) : quarterlyDone.add(i);
-    LS.set('quarterlyDone', [...quarterlyDone]);
-    renderRoutine();
-  }
-  renderRoutine();
-
-  // ── SAVE INDICATOR VALUES ON BLUR ────────────────────────────────
-  document.addEventListener('change', e => {
-    if (e.target.classList.contains('indicator-val')) LS.set('indicators', indicators);
   });
-  // ── LEARNING NOTES ───────────────────────────────────────────────
-  let learnNotes = LS.get('learnNotes', []);
-  let activeLearnTags = [];
-  let activeLearnFilter = 'all';
 
-  function toggleLearnTag(btn, tag) {
-    btn.classList.toggle('active');
-    activeLearnTags = activeLearnTags.includes(tag)
-      ? activeLearnTags.filter(t => t !== tag)
-      : [...activeLearnTags, tag];
-  }
-
-  function toggleNewLearn() {
-    const form = document.getElementById('learningNewForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-  }
-
-  function saveLearnNote() {
-    const title = document.getElementById('learnTitle').value.trim();
-    if (!title) return;
-    learnNotes.unshift({
-      id: Date.now(),
-      date: now.toISOString().split('T')[0],
-      title,
-      source: document.getElementById('learnSource').value,
-      tags: [...activeLearnTags],
-      concept: document.getElementById('learnConcept').value,
-      connect: document.getElementById('learnConnect').value,
-      questions: document.getElementById('learnQuestions').value,
-    });
-    LS.set('learnNotes', learnNotes);
-    activeLearnTags = [];
-    document.querySelectorAll('#learningNewForm .tag-toggle').forEach(t => t.classList.remove('active'));
-    ['learnTitle','learnSource','learnConcept','learnConnect','learnQuestions'].forEach(id => document.getElementById(id).value = '');
-    toggleNewLearn();
-    renderLearnNotes();
-  }
-
-  function deleteLearnNote(i) {
-    learnNotes.splice(i, 1);
-    LS.set('learnNotes', learnNotes);
-    renderLearnNotes();
-  }
-
-  function filterLearn(btn, tag) {
-    document.querySelectorAll('#learnFilterRow .tag-toggle').forEach(t => {
-      t.classList.remove('active');
-      t.style.borderColor = ''; t.style.color = '';
-    });
-    btn.classList.add('active');
-    if (tag === 'all') { btn.style.borderColor = 'var(--accent)'; btn.style.color = 'var(--accent)'; }
-    activeLearnFilter = tag;
-    renderLearnNotes();
-  }
-
-  function renderLearnNotes() {
-    const filtered = activeLearnFilter === 'all'
-      ? learnNotes
-      : learnNotes.filter(n => n.tags.includes(activeLearnFilter));
-
-    document.getElementById('learnList').innerHTML = filtered.length ? filtered.map((n, i) => `
-      <div class="journal-entry" onclick="toggleLearnExpand(${i})" style="cursor:pointer;">
-        <div class="journal-entry-header">
-          <span class="journal-entry-date">${n.date}${n.source ? ' · <span style="color:var(--muted)">' + n.source + '</span>' : ''}</span>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div class="journal-entry-tags">${n.tags.map(t => `<span class="tag ${t}">${t}</span>`).join('')}</div>
-            <button onclick="event.stopPropagation();deleteLearnNote(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;padding:2px 5px;" title="Delete">✕</button>
-          </div>
-        </div>
-        <div class="journal-entry-title">${n.title}</div>
-        <div class="journal-entry-preview">${n.concept ? n.concept.substring(0,130) + (n.concept.length > 130 ? '...' : '') : ''}</div>
-        <div id="learn-expand-${i}" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
-          ${n.connect ? `<div style="margin-bottom:10px;"><div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent2);margin-bottom:4px;">Connections</div><div style="font-size:0.8rem;color:var(--text);line-height:1.6;">${n.connect}</div></div>` : ''}
-          ${n.questions ? `<div><div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent3);margin-bottom:4px;">Open Questions</div><div style="font-size:0.8rem;color:var(--text);line-height:1.6;">${n.questions}</div></div>` : ''}
-        </div>
-      </div>
-    `).join('') : `<div style="color:var(--muted);font-size:0.85rem;padding:20px 0;">No notes yet${activeLearnFilter !== 'all' ? ' for this topic' : ''}. Hit + New Note to start building your knowledge base.</div>`;
-  }
-
-  function toggleLearnExpand(i) {
-    const el = document.getElementById('learn-expand-' + i);
-    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  }
-
-  renderLearnNotes();
-
+  mapSim.on('tick',()=>{
+    mapLinkSel.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    mapNodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+}
 </script>
 </body>
 </html>
-<script>
-  // ── SNAPSHOTS ────────────────────────────────────────────────────
-  let snapshots = LS.get('snapshots', []);
-
-  function captureCurrentState() {
-    const regime = {};
-    ['growthCycle','inflationRegime','cbStance','riskAppetite','dollarTrend','geoStress'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) regime[id] = el.value;
-    });
-    const summaryEl = document.getElementById('regimeSummary');
-    return {
-      regime,
-      summary: summaryEl ? summaryEl.value : '',
-      indicators: JSON.parse(JSON.stringify(indicators)),
-      implications: JSON.parse(JSON.stringify(implications)),
-    };
-  }
-
-  function saveSnapshot() {
-    const name = document.getElementById('snapshotName').value.trim();
-    if (!name) return;
-    snapshots.unshift({
-      id: Date.now(),
-      name,
-      date: new Date().toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'}),
-      state: captureCurrentState(),
-    });
-    LS.set('snapshots', snapshots);
-    document.getElementById('snapshotName').value = '';
-    renderSnapshots();
-  }
-
-  function deleteSnapshot(i) {
-    snapshots.splice(i, 1);
-    LS.set('snapshots', snapshots);
-    renderSnapshots();
-  }
-
-  function restoreSnapshot(i) {
-    const s = snapshots[i].state;
-    // Restore regime dropdowns
-    Object.entries(s.regime).forEach(([id, val]) => {
-      const el = document.getElementById(id);
-      if (el) el.value = val;
-    });
-    saveRegime();
-    // Restore summary
-    const summaryEl = document.getElementById('regimeSummary');
-    if (summaryEl) { summaryEl.value = s.summary; LS.set('regimeSummary', s.summary); }
-    // Restore indicators
-    indicators.forEach((ind, i) => {
-      if (s.indicators[i]) { ind.val = s.indicators[i].val; ind.signal = s.indicators[i].signal; }
-    });
-    LS.set('indicators', indicators);
-    renderIndicators();
-    // Restore implications
-    implications.forEach((imp, i) => { if (s.implications[i]) imp.text = s.implications[i].text; });
-    LS.set('implications', implications);
-    renderImplications();
-    renderSnapshots();
-  }
-
-  function toggleSnapshotExpand(i) {
-    const el = document.getElementById('snap-expand-' + i);
-    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-  }
-
-  function renderSnapshots() {
-    const el = document.getElementById('snapshotList');
-    if (!el) return;
-    el.innerHTML = snapshots.length ? snapshots.map((snap, i) => {
-      const s = snap.state;
-      return `
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <div>
-              <span style="font-family:'Playfair Display',serif;font-size:0.95rem;color:var(--text);">${snap.name}</span>
-              <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);margin-left:10px;">${snap.date}</span>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <button onclick="toggleSnapshotExpand(${i})" class="btn btn-ghost" style="font-size:0.55rem;padding:5px 10px;">View</button>
-              <button onclick="restoreSnapshot(${i})" class="btn btn-ghost" style="font-size:0.55rem;padding:5px 10px;color:var(--accent);border-color:var(--accent);">Restore</button>
-              <button onclick="deleteSnapshot(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.7rem;padding:2px 6px;">✕</button>
-            </div>
-          </div>
-          ${s.summary ? `<div style="font-size:0.78rem;color:var(--muted);font-style:italic;margin-bottom:8px;">"${s.summary.substring(0,120)}${s.summary.length>120?'...':''}"</div>` : ''}
-          <div id="snap-expand-${i}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-              ${Object.entries(s.regime).map(([k,v]) => `
-                <div style="background:var(--surface);border-radius:5px;padding:8px 10px;">
-                  <div style="font-family:'IBM Plex Mono',monospace;font-size:0.55rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:2px;">${k.replace(/([A-Z])/g,' $1').trim()}</div>
-                  <div style="font-size:0.78rem;color:var(--text);">${v}</div>
-                </div>
-              `).join('')}
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              ${s.indicators.map(ind => `
-                <div style="background:var(--surface);border-radius:5px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
-                  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--muted);">${ind.name}</span>
-                  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text);">${ind.val}</span>
-                  <span style="width:7px;height:7px;border-radius:50%;background:${ind.signal==='bullish'?'var(--green)':ind.signal==='bearish'?'var(--red)':ind.signal==='watch'?'var(--accent)':'var(--muted)'};display:inline-block;"></span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('') : '<div style="color:var(--muted);font-size:0.8rem;padding:8px 0;">No snapshots yet — set your dashboard, name it, and hit Save Snapshot.</div>';
-  }
-
-  renderSnapshots();
-</script>
